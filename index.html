@@ -1,9 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+  缘分 (Yuánfèn) — Interactive WebGL, generative audio
+  2025 · Michael Leng · V14.2
+
+  An interactive meditation on destined connection.
+  The Chinese concept of yuánfèn describes the invisible force
+  that draws certain people together — not by choice, but by recognition.
+
+  Hold to pull. Release to let go. Double-tap to push apart.
+  Stay long enough, and something changes permanently.
+  Stay longer, and even that fades.
+-->
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>缘分 — Yuánfèn</title>
+<meta name="description" content="An interactive meditation on destined connection. Two souls orbit, drawn by invisible force.">
+<meta property="og:title" content="缘分 — Yuánfèn">
+<meta property="og:description" content="An interactive meditation on destined connection.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#030206">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>缘</text></svg>">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+SC:wght@200;300;400&family=Share+Tech+Mono&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
@@ -37,21 +55,30 @@
     color:rgba(255,255,255,0);letter-spacing:0.08em;text-align:center;line-height:1.8;max-width:60%}
   #ceremony{position:fixed;inset:0;z-index:100;background:#030206;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity 3s ease}
   #ceremony.farewell{opacity:0;pointer-events:none}
+  #ceremony.loading{pointer-events:none}
   @keyframes cerBreathe{0%,100%{transform:scale(1);opacity:0.3}50%{transform:scale(2.5);opacity:0.7}}
+  #webgl-fail{position:fixed;inset:0;z-index:200;background:#030206;display:none;align-items:center;justify-content:center;
+    font-family:'Cormorant Garamond',serif;color:rgba(255,255,255,0.4);font-size:1.1rem;font-style:italic;text-align:center;padding:2rem;letter-spacing:0.1em;line-height:2}
 </style>
 </head>
 <body>
+<main role="img" aria-label="Yuánfèn — interactive audio-visual meditation" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
+  <h1>缘分 — Yuánfèn</h1>
+  <p>An interactive audio-visual meditation on destined connection. Two glowing spheres of particles orbit each other in space. Holding your pointer acts as gravity, pulling them together. Double-tapping pushes them apart. As they draw close, the music shifts from minor to major. When they merge, they permanently exchange particles — carrying pieces of each other forward. Over time, the particles slowly erode — a meditation on impermanence.</p>
+</main>
 <div id="color-field"></div>
-<canvas id="star-canvas"></canvas>
+<canvas id="star-canvas" aria-hidden="true"></canvas>
 <div id="crt-overlay"></div>
 <div id="typo-layer"></div>
 <div id="quote-layer"></div>
 <div id="mark"><div class="zh">缘分</div><div class="sub">yuánfèn</div></div>
-<div id="instructions">hold to pull · release to let go</div>
+<div id="instructions">hold to pull · release to let go · double-tap to push apart</div>
 <div id="mem-layer"></div>
 <div id="conv-layer"><div id="conv-text"></div></div>
 
-<div id="ceremony">
+<div id="webgl-fail">this piece requires WebGL.<br>please try a modern browser.</div>
+
+<div id="ceremony" class="loading">
   <div style="width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.3);margin-bottom:40px;animation:cerBreathe 4s ease-in-out infinite"></div>
   <div id="cer-l1" style="font-family:'Cormorant Garamond',serif;font-size:clamp(0.7rem,1.5vw,1rem);font-weight:300;font-style:italic;color:rgba(255,255,255,0);letter-spacing:0.15em;text-align:center;line-height:2;transition:color 3s ease"></div>
   <div id="cer-l2" style="font-family:'Noto Serif SC',serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:200;color:rgba(255,255,255,0);letter-spacing:0.4em;margin:30px 0 15px;transition:color 3s ease;text-shadow:0 0 60px rgba(255,255,255,0.05)"></div>
@@ -63,32 +90,77 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════
-   缘分 V11 — S++ REBUILD
+   缘分 V14.2 — EXHIBITION GRADE (graded)
    ═══════════════════════════════════════════════════════════════════ */
 
+// ─── CONFIG ──────────────────────────────────────────────────────
+const CFG={
+  // Physics
+  pullAccel:1.2, pullDecay:0.6, springK:1.2, springKPull:0.7,
+  cursorAwareZone:0.15, cursorLeanA:0.003, cursorLeanB:0.002,
+  // Repel
+  repelForce:6.0, repelDecay:0.5, repelCooldown:0.4,
+  // Souls
+  soulRadius:2.2, particleCount:25000, transferBase:200, maxTransfers:3000,
+  // Convergence thresholds
+  convT:[6,18,35,45],
+  // Bloom
+  bloomBase:1.0, bloomConvScale:0.4, bloomExciteScale:0.25,
+  // Decay / impermanence
+  decayGracePeriod:180, decayDuration:720, decayExponent:1.5,
+  // Audio
+  masterGain:0.22, noteIntervalMin:0.7, noteIntervalBase:3.5,
+  phraseMinNotes:2, phraseMaxNotes:5,
+  silenceShortMin:1.0, silenceShortMax:2.0, silenceLongMin:2.0, silenceLongMax:4.0,
+  // Mythic events
+  mythicCooldown:30, mythicAutoMin:200, mythicAutoRange:120,
+  // Stars
+  starCount:600, starParallaxScale:0.012,
+};
+
+// ─── WEBGL CHECK ─────────────────────────────────────────────────
+try{const tc=document.createElement('canvas');
+  if(!tc.getContext('webgl')&&!tc.getContext('experimental-webgl'))throw 0;
+}catch(e){document.getElementById('webgl-fail').style.display='flex';
+  document.getElementById('ceremony').style.display='none';throw new Error('WebGL unavailable')}
+
 // ─── CEREMONY ────────────────────────────────────────────────────
-let cerDone=false;
+let cerDone=false,cerReady=false;
 (function(){
   const c=document.getElementById('ceremony');
   setTimeout(()=>{document.getElementById('cer-l1').style.color='rgba(255,255,255,0.5)';document.getElementById('cer-l1').textContent='some connections are not chosen'},1500);
   setTimeout(()=>{document.getElementById('cer-l2').style.color='rgba(255,255,255,0.1)';document.getElementById('cer-l2').textContent='缘 分'},4000);
   setTimeout(()=>{document.getElementById('cer-l3').style.color='rgba(255,255,255,0.35)';document.getElementById('cer-l3').textContent='they are recognized'},6000);
-  setTimeout(()=>{document.getElementById('cer-go').style.color='rgba(255,255,255,0.15)';document.getElementById('cer-go').textContent='touch anywhere to begin'},8500);
-  function go(){if(cerDone)return;cerDone=true;c.classList.add('farewell');setTimeout(()=>{c.style.display='none'},3500);initAudio()}
+  setTimeout(()=>{
+    document.getElementById('cer-go').style.color='rgba(255,255,255,0.15)';
+    document.getElementById('cer-go').textContent='touch anywhere to begin';
+    c.classList.remove('loading');cerReady=true;
+  },8500);
+  function go(){if(cerDone||!cerReady)return;cerDone=true;c.classList.add('farewell');setTimeout(()=>{c.style.display='none'},3500);initAudio()}
   c.addEventListener('click',go);c.addEventListener('touchstart',go,{passive:true});
 })();
 
 let W=innerWidth,H=innerHeight;
 const PR=Math.min(devicePixelRatio,2);
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
-renderer.setSize(W,H);renderer.setPixelRatio(PR);renderer.setClearColor(0x000000,0);renderer.autoClear=false;
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+renderer.setSize(W,H);renderer.setPixelRatio(PR);renderer.setClearColor(0x030206,1);renderer.autoClear=false;
+renderer.domElement.setAttribute('aria-hidden','true');
 document.body.prepend(renderer.domElement);
+// Log GL capabilities for debugging
+const _gl=renderer.getContext();
+console.log('GL Point Size Range:',_gl.getParameter(_gl.ALIASED_POINT_SIZE_RANGE));
+console.log('GL Max Texture Size:',_gl.getParameter(_gl.MAX_TEXTURE_SIZE));
+console.log('Pixel Ratio:',PR,'Canvas:',W+'x'+H);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(50,W/H,0.1,200);
 camera.position.z=16;
+camera.lookAt(0,0,0);
+camera.updateMatrixWorld(true); // force matrix before first DOF calc
+// Compute correct initial focal Z (view-space depth of origin)
+const initFocalZ=new THREE.Vector3(0,0,0).applyMatrix4(camera.matrixWorldInverse).z;
 
 // ─── PERFORMANCE ADAPTIVE ────────────────────────────────────────
-let SC=40000;
+let SC=CFG.particleCount;
 let perfFrames=0,perfSum=0,perfDone=false;
 function perfCheck(dt){
   if(perfDone)return;
@@ -96,38 +168,65 @@ function perfCheck(dt){
   if(perfFrames>=60){
     perfDone=true;
     const avg=perfSum/60;
-    if(avg>0.030){SC=10000;rebuildSouls()}      // <33fps → 10K
-    else if(avg>0.020){SC=20000;rebuildSouls()}  // <50fps → 20K
+    if(avg>0.030){SC=8000;rebuildSouls()}       // <33fps → 8K
+    else if(avg>0.020){SC=15000;rebuildSouls()}  // <50fps → 15K
     // else keep 40K
   }
 }
+const TRANSFER_BASE=CFG.transferBase; // at 25K particles
+let TRANSFER_PER_MERGE=TRANSFER_BASE;
+let transfersFromA=0,transfersFromB=0;
+const MAX_TRANSFERS=CFG.maxTransfers;
+let mergeCount=0; // tracks total merges for escalation
+
 function rebuildSouls(){
   scene.remove(soulA);scene.remove(soulB);
-  const a=createSoul(0.08);const b=createSoul(0.92);
+  const a=createSoul(0.08,new THREE.Vector3(1,0,0));const b=createSoul(0.92,new THREE.Vector3(-1,0,0));
   soulA=a;soulB=b;scene.add(soulA);scene.add(soulB);
+  TRANSFER_PER_MERGE=Math.round(TRANSFER_BASE*(SC/CFG.particleCount)); // scale with particle count
 }
 
 // ─── COLOR FIELD ─────────────────────────────────────────────────
 const colorField=document.getElementById('color-field');
 function updateColorField(t){
   const c=t*0.008;
-  const h1=230+Math.sin(c)*25+Math.sin(c*0.7)*15,h2=h1+40+Math.sin(c*1.3)*20;
-  const s1=15+Math.sin(c*0.5)*10,s2=20+Math.cos(c*0.3)*12;
-  const l1=3+Math.sin(c*0.4)*2,l2=5+Math.cos(c*0.6)*3;
+  const gDecay=soulA.material.uniforms.uDecay.value;
+  // Convergence shifts hue from cold indigo (230) toward warm amber-violet (200-210)
+  const convWarm=convStage*0.15+currentProx*0.1; // 0-0.7 range
+  const h1=230-convWarm*35+Math.sin(c)*25+Math.sin(c*0.7)*15;
+  const h2=h1+40+Math.sin(c*1.3)*20;
+  // ── IMPERMANENCE: saturation and lightness drain with decay ──
+  const decaySatMul=1-gDecay*0.6; // saturation drops to 40% at full decay
+  const decayLitMul=1-gDecay*0.3; // lightness drops to 70%
+  const s1=(15+convWarm*12+Math.sin(c*0.5)*10)*decaySatMul,s2=(20+convWarm*10+Math.cos(c*0.3)*12)*decaySatMul;
+  const l1=(3+convWarm*1.5+Math.sin(c*0.4)*2)*decayLitMul,l2=(5+convWarm*2+Math.cos(c*0.6)*3)*decayLitMul;
   colorField.style.background=`linear-gradient(${135+Math.sin(c*0.2)*30}deg,hsl(${h1},${s1}%,${l1}%) 0%,hsl(${(h1+h2)/2},${(s1+s2)/2}%,${(l1+l2)/2*0.7}%) 50%,hsl(${h2},${s2}%,${l2}%) 100%)`;
 }
 
 // ─── STAR FIELD (2D canvas) ──────────────────────────────────────
 const starCvs=document.getElementById('star-canvas'),starCtx=starCvs.getContext('2d');
 starCvs.width=W;starCvs.height=H;
-const stars=[];for(let i=0;i<600;i++)stars.push({x:Math.random()*W,y:Math.random()*H,
+const stars=[];for(let i=0;i<CFG.starCount;i++)stars.push({x:Math.random()*W,y:Math.random()*H,
+  baseX:Math.random()*W,baseY:Math.random()*H,
   size:Math.random()<0.15?(1.5+Math.random()*2):(0.3+Math.random()*1.2),
   br:0.15+Math.random()*0.5,spd:0.3+Math.random()*2,ph:Math.random()*6.28,
-  hue:Math.random()<0.1?(200+Math.random()*80):-1});
+  hue:Math.random()<0.1?(200+Math.random()*80):-1,
+  parallax:0.3+Math.random()*0.7}); // depth layer for parallax
 function drawStars(t){
   starCtx.clearRect(0,0,starCvs.width,starCvs.height);
+  const gDecay=soulA?soulA.material.uniforms.uDecay.value:0;
+  const camX=camera.position.x,camY=camera.position.y;
   for(const s of stars){
-    const tw=0.4+0.6*Math.pow((Math.sin(t*s.spd+s.ph)*0.5+0.5),2);const a=s.br*tw;
+    // ── PARALLAX: stars shift based on camera position and depth ──
+    s.x=s.baseX-camX*s.parallax*W*CFG.starParallaxScale;
+    s.y=s.baseY+camY*s.parallax*H*CFG.starParallaxScale;
+    // Wrap
+    s.x=((s.x%W)+W)%W;s.y=((s.y%H)+H)%H;
+    const tw=0.4+0.6*Math.pow((Math.sin(t*s.spd+s.ph)*0.5+0.5),2);
+    // ── IMPERMANENCE: stars dim with decay ──
+    const decayDim=1-gDecay*0.45;
+    const a=s.br*tw*decayDim;
+    if(a<0.005)continue; // skip invisible stars
     starCtx.fillStyle=s.hue>=0?`hsla(${s.hue},40%,80%,${a})`:`rgba(255,255,255,${a})`;
     starCtx.beginPath();starCtx.arc(s.x,s.y,s.size*tw,0,6.28);starCtx.fill();
     if(s.size>1.8&&tw>0.7){starCtx.strokeStyle=`rgba(255,255,255,${a*0.25})`;starCtx.lineWidth=0.3;
@@ -140,36 +239,39 @@ function drawStars(t){
 const apartQuotes=[
   "there is no arrival, only orbit",
   "the distance between almost and everything is one breath",
-  "am i doing this right? — yes. keep going.",
-  "every system outlives its maker",
   "you can't optimize your way to meaning",
   "the dream that felt like home is still the navigation point",
   "conviction isn't confidence — it's the decision to stay",
-  "a life designed, not drifted into",
   "hold loosely what you love. it comes back different.",
   "gravity isn't a choice. neither is this.",
-  "the flywheel keeps turning while you sleep",
-  "nervous systems first, identities second",
-  "i design systems that outlast motivation",
-  "every frame is a decision about what matters",
+  "the things that last are never the things you planned",
+  "longing is just memory reaching forward",
+  "some distances teach you what closeness couldn't",
+  "the space between is not empty — it's full of almost",
   "you don't outrun the pattern — you learn to dance inside it",
+  "every orbit is a question asked with the whole body",
+  "what you miss most is what you didn't know to notice",
+  "the push was honest. the return will be too.",
+  "separation is not subtraction",
+  "the further away, the more clearly i see the shape of you",
 ];
 const togetherQuotes=[
-  "architect the structure, release inside it",
-  "control is the prerequisite to surrender",
   "strangers moving in the same rhythm is the closest thing to telepathy",
   "some people find each other across rooms. some across lifetimes.",
   "knowing without knowing — that's yuánfèn",
-  "motion is a language most people never learn to speak",
   "the goal is not comfort — the goal is resonance",
-  "build the web, month by month, thread by thread",
-  "i make things that breathe",
-  "compound everything — skills, capital, relationships",
-  "structure breeds freedom, not the other way around",
-  "the work isn't finished because neither am i",
   "what you pay attention to becomes your life",
-  "i didn't choose discipline — discipline chose me, and i stayed",
-  "the best positions are held through volatility, not around it",
+  "closeness is not a place — it's a frequency",
+  "the body remembers what the mind releases",
+  "recognition doesn't need language",
+  "we were already changed before we touched",
+  "some things only exist in the space between two people",
+  "to be known is to be altered",
+  "the work isn't finished because neither am i",
+  "what remains is always more than what was given",
+  "surrender isn't the opposite of control — it's the other side",
+  "every merge leaves a mark neither of us chose",
+  "the closer we get, the less of me is only mine",
 ];
 const quoteLayer=document.getElementById('quote-layer');
 const ACTIVE_QUOTES=4,quoteSlots=[],recentQ=[];
@@ -203,17 +305,32 @@ for(let i=0;i<ACTIVE_QUOTES;i++){
   el.style.transform=`rotate(${quoteSlots[i].rotation}deg)`;
 }
 function updateQuotes(t){
+  // Global decay for impermanence effects
+  const gDecay=soulA.material.uniforms.uDecay.value;
   for(const s of quoteSlots){
     const cyc=((t/s.cycleDuration)+s.phase/6.28)%1;
     let a=0,bl=s.blur;
     if(cyc<0.15){const p=cyc/0.15;a=s.maxAlpha*p*p;bl=s.blur*(1.5-p*0.5)}
     else if(cyc<0.5){a=s.maxAlpha;bl=s.blur}
     else if(cyc<0.7){const p=(cyc-0.5)/0.2;a=s.maxAlpha*(1-p*p);bl=s.blur*(1+p*0.8)}
-    else{a=0;if(cyc>0.85&&cyc<0.87){s.text=pickQuote();s.el.textContent=s.text;
+    else{a=0;if(cyc>0.85&&cyc<0.87){s.text=pickQuote();
+      // ── IMPERMANENCE: quotes fragment as decay progresses ──
+      if(gDecay>0.15){
+        const chars=s.text.split('');
+        const fragRate=Math.min(0.6,gDecay*0.8);
+        for(let ci=0;ci<chars.length;ci++){
+          if(chars[ci]!==' '&&Math.random()<fragRate*0.4){
+            chars[ci]=Math.random()<0.3?'·':Math.random()<0.5?' ':'⠀';
+          }
+        }
+        s.el.textContent=chars.join('');
+      }else{s.el.textContent=s.text}
       const p=rndQPos();s.x=p.x;s.y=p.y;s.el.style.left=p.x+'%';s.el.style.top=p.y+'%';
       s.fontSize=14+Math.random()*18;s.el.style.fontSize=s.fontSize+'px';
       s.rotation=-4+Math.random()*8;s.blur=3+Math.random()*5;s.maxAlpha=0.04+Math.random()*0.06}}
-    s.el.style.color=`rgba(255,255,255,${a})`;s.el.style.filter=`blur(${bl}px)`;
+    // Decay dims quotes further
+    const decayDim=1-gDecay*0.5;
+    s.el.style.color=`rgba(255,255,255,${a*decayDim})`;s.el.style.filter=`blur(${bl}px)`;
     s.el.style.transform=`rotate(${s.rotation+Math.sin(t*0.03+s.phase)*1.5}deg)`;
   }
 }
@@ -235,17 +352,68 @@ function blurP(src,a,b,w,h){bPH.material.uniforms.tD.value=src.texture;bPH.mater
   renderer.setRenderTarget(a);renderer.clear();renderer.render(bPH.scene,fsCam);
   bPV.material.uniforms.tD.value=a.texture;bPV.material.uniforms.res.value.set(w,h);
   renderer.setRenderTarget(b);renderer.clear();renderer.render(bPV.scene,fsCam)}
-const compF=`uniform sampler2D tScene,tB1,tB2,tB3;uniform float bStr,time,flash;uniform vec2 res;varying vec2 vUv;
+const compF=`uniform sampler2D tScene,tB1,tB2,tB3;uniform float bStr,time,flash,warmth,streak;uniform vec2 res;varying vec2 vUv;
   float rand(vec2 co){return fract(sin(dot(co,vec2(12.9898,78.233)))*43758.5453);}
   void main(){vec2 uv=vUv;vec2 cen=uv-0.5;float dist=length(cen);
-  float ca=dist*dist*0.015;vec2 caO=cen*ca;
+  // ── CHROMATIC ABERRATION — slightly stronger lateral CA, Zeiss/anamorphic feel ──
+  float ca=dist*dist*0.018;vec2 caO=cen*ca;
   float r=texture2D(tScene,uv+caO).r;float g=texture2D(tScene,uv).g;float b=texture2D(tScene,uv-caO*0.7).b;
   vec3 col=vec3(r,g,b);
-  col+=texture2D(tB1,uv).rgb*bStr*0.6;col+=texture2D(tB2,uv).rgb*bStr*0.55;col+=texture2D(tB3,uv).rgb*bStr*0.45;
-  col+=rand(uv*res+time*127.0)*0.03-0.015;col+=flash*vec3(0.9,0.85,0.8);
+  // ── BLOOM ──
+  vec3 bm1=texture2D(tB1,uv).rgb;vec3 bm2=texture2D(tB2,uv).rgb;vec3 bm3=texture2D(tB3,uv).rgb;
+  col+=bm1*bStr*0.5;col+=bm2*bStr*0.45;col+=bm3*bStr*0.35;
+  // ── ANAMORPHIC STREAK — horizontal bloom smear during intense moments ──
+  if(streak>0.01){vec3 sk=vec3(0.0);
+    sk+=texture2D(tB1,uv+vec2(0.012,0.0)).rgb+texture2D(tB1,uv-vec2(0.012,0.0)).rgb;
+    sk+=texture2D(tB1,uv+vec2(0.025,0.0)).rgb+texture2D(tB1,uv-vec2(0.025,0.0)).rgb;
+    sk+=texture2D(tB1,uv+vec2(0.04,0.0)).rgb*0.6+texture2D(tB1,uv-vec2(0.04,0.0)).rgb*0.6;
+    col+=sk*streak*0.06;}
+  // ── FAKE DOF — edges blend more bloom for peripheral softness ──
+  float dof=smoothstep(0.15,0.65,dist);
+  col=mix(col,col+bm2*0.4,dof*0.18);
+
+  // ═══════════════════════════════════════════════════════════
+  //   GRADE — final color pass (cinema order: composite → grade → grain)
+  // ═══════════════════════════════════════════════════════════
+
+  // ── 1. SHADOW DENSITY — lift pure black to faint indigo ──
+  // Prevents OLED-flat blacks; gives shadows the same indigo as the color field.
+  // Doyle/Wong Kar-wai shadows always have *something* in them.
+  col=max(col,vec3(0.012,0.010,0.020));
+
+  // ── 2. SPLIT-TONE — cool shadows, warm highlights ──
+  // Luminance-masked tinting. The existing warmth uniform now drives
+  // how amber the highlights go (convergence still pushes warm, but tonally targeted).
+  float lum=dot(col,vec3(0.299,0.587,0.114));
+  vec3 shadowTint=vec3(0.88,0.94,1.06);   // indigo lift in shadows
+  vec3 highlightTint=vec3(1.05,0.99,0.90); // amber push in highlights
+  float shadowMask=1.0-smoothstep(0.0,0.35,lum);
+  float highMask=smoothstep(0.45,1.0,lum);
+  col*=mix(vec3(1.0),shadowTint,shadowMask*0.65);
+  col*=mix(vec3(1.0),highlightTint,highMask*(0.5+warmth*0.6));
+
+  // ── 3. FILMIC TONEMAP — inline ACES-fit roll-off ──
+  // Highlights compress toward white instead of clipping flat.
+  // Single biggest "looks graded" move.
+  col=(col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14);
+
+  // ── 4. HALATION — peak whites desat toward warm white ──
+  // Mimics film overexposure: bright soul cores and merge flashes
+  // bleed warm instead of staying chromatic.
+  float hLum=dot(col,vec3(0.299,0.587,0.114));
+  float hMask=smoothstep(0.75,1.15,hLum);
+  col=mix(col,vec3(1.0,0.96,0.88)*hLum,hMask*0.4);
+
+  // ── 5. CONTRAST — subtle pivot around 0.5 ──
+  col=mix(vec3(0.5),col,1.06);
+
+  // ── 6. GRAIN — slightly chunkier, more film-like ──
+  col+=rand(uv*res+time*127.0)*0.04-0.02;
+  // ── 7. FLASH — UI accent, post-grade ──
+  col+=flash*vec3(0.9,0.85,0.8);
   gl_FragColor=vec4(col,1.0);}`;
 const compPass=mkPass(compF,{tScene:{value:null},tB1:{value:null},tB2:{value:null},tB3:{value:null},
-  bStr:{value:1.1},time:{value:0},flash:{value:0},res:{value:new THREE.Vector2(W,H)}});
+  bStr:{value:CFG.bloomBase+0.1},time:{value:0},flash:{value:0},warmth:{value:0},streak:{value:0},res:{value:new THREE.Vector2(W,H)}});
 
 // ─── SPRING PHYSICS ──────────────────────────────────────────────
 const tgtA=new THREE.Vector3(-1,0,0),tgtB=new THREE.Vector3(1,0,0);
@@ -255,18 +423,71 @@ function spD(c,t,v,k,dt){const d=2*Math.sqrt(k),a=-k*(c-t)-d*v,nv=v+a*dt;return{
 function spV3(p,t,v,k,dt){const x=spD(p.x,t.x,v.x,k,dt),y=spD(p.y,t.y,v.y,k,dt),z=spD(p.z,t.z,v.z,k,dt);
   p.set(x.pos,y.pos,z.pos);v.set(x.vel,y.vel,z.vel)}
 
-// ─── MOUSE + PULL ────────────────────────────────────────────────
+// ─── MOUSE + PULL + REPEL ────────────────────────────────────────
 const mW=new THREE.Vector3();let mDown=false,pullStr=0,wasPulling=false;
+let cursorNear=0; // 0-1 proximity of cursor to nearest soul (before click)
+// Repel system — intentional separation as a meaningful act
+let repelStr=0,repelDir=new THREE.Vector3(),lastRepelTime=-999;
+let dblClickTimer=0,dblClickCount=0;
 function onMP(x,y){mW.set(((x/W)*2-1)*8,(-(y/H)*2+1)*6,0)}
 document.addEventListener('mousemove',e=>onMP(e.clientX,e.clientY));
 document.addEventListener('touchmove',e=>{e.preventDefault();if(e.touches[0])onMP(e.touches[0].clientX,e.touches[0].clientY)},{passive:false});
 document.addEventListener('mousedown',()=>{mDown=true});document.addEventListener('mouseup',()=>{mDown=false});
 document.addEventListener('touchstart',e=>{e.preventDefault();mDown=true;if(e.touches[0])onMP(e.touches[0].clientX,e.touches[0].clientY)},{passive:false});
 document.addEventListener('touchend',e=>{e.preventDefault();mDown=false},{passive:false});
+// ── REPEL: double-click/double-tap or right-click pushes souls apart ──
+function triggerRepel(){
+  const now=performance.now()/1000;
+  if(now-lastRepelTime<CFG.repelCooldown)return;
+  lastRepelTime=now;
+  repelStr=CFG.repelForce;
+  // Direction: away from each other (or away from cursor if pulling)
+  repelDir.subVectors(posB,posA).normalize();
+  // Visual: cool flash + outward ejections
+  burstFlashAlpha=0.06;
+  const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
+  spawnRing(mid,true);
+  for(let i=0;i<4;i++){spawnEj(posA,repelDir.clone().negate());spawnEj(posB,repelDir.clone())}
+  // Audio: descending phrase
+  if(audioReady&&pianoSynth){
+    const descNotes=['G5','E5','C5','Ab4','Eb4'];
+    descNotes.forEach((n,i)=>{setTimeout(()=>{pianoSynth.triggerAttackRelease(n,'16n',undefined,0.12-i*0.015)},i*90)});
+  }
+  // Brief coolness in warmth tint
+  compPass.material.uniforms.warmth.value*=0.3;
+  // Convergence text: separation-themed
+  const sepTexts=['sometimes the letting go is the gift.','distance is its own kind of knowing.','not all departures are losses.','the space returns. it always does.','apart — but altered.'];
+  convTimer=0;convFade=1;convTextEl.textContent=sepTexts[Math.floor(Math.random()*sepTexts.length)];
+  // Decay penalty: intentional separation slightly accelerates impermanence
+  decayAccum+=2.5;
+}
+document.addEventListener('dblclick',e=>{e.preventDefault();triggerRepel()});
+document.addEventListener('contextmenu',e=>{e.preventDefault();triggerRepel()});
+// Double-tap detection for mobile
+let lastTapTime=0;
+document.addEventListener('touchstart',e=>{
+  const now=Date.now();if(now-lastTapTime<300&&e.touches.length===1){triggerRepel()}lastTapTime=now;
+},{passive:true});
+
+// Cursor awareness: project soul positions to screen, measure distance to mouse
+function updateCursorAwareness(){
+  if(mDown){cursorNear=0;return} // pull overrides awareness
+  const pA=posA.clone().project(camera);
+  const pB=posB.clone().project(camera);
+  const mx=(mW.x/8+1)*0.5,my=(mW.y/6+1)*0.5; // normalized cursor
+  const sAx=(pA.x+1)*0.5,sAy=(pA.y+1)*0.5;
+  const sBx=(pB.x+1)*0.5,sBy=(pB.y+1)*0.5;
+  const dA=Math.sqrt((mx-sAx)**2+(my-sAy)**2);
+  const dB=Math.sqrt((mx-sBx)**2+(my-sBy)**2);
+  const nearest=Math.min(dA,dB);
+  cursorNear=Math.max(0,1-nearest/CFG.cursorAwareZone);
+}
 
 // ─── SOULS ───────────────────────────────────────────────────────
-const SOUL_RADIUS=2.8;
-function createSoul(ghostHue){
+const SOUL_RADIUS=CFG.soulRadius;
+function createSoul(ghostHue,coreBiasDir){
+  // coreBiasDir: unit vector pointing toward the other soul (for core positioning)
+  const bias=coreBiasDir||new THREE.Vector3(0,0,0);
   const geo=new THREE.BufferGeometry();
   const pos=new Float32Array(SC*3),col=new Float32Array(SC*3);
   const siz=new Float32Array(SC),phase=new Float32Array(SC),depth=new Float32Array(SC);
@@ -279,11 +500,18 @@ function createSoul(ghostHue){
     else if(zone<0.85) rF=0.55+Math.random()*0.12;
     else rF=0.12+Math.random()*0.35;
     const r=SOUL_RADIUS*rF;
-    pos[i*3]=r*sp*Math.cos(th);pos[i*3+1]=r*Math.cos(ph);pos[i*3+2]=r*sp*Math.sin(th);
-    if(rF>0.92) siz[i]=Math.random()*2.5+0.8;
-    else if(rF>0.80) siz[i]=Math.random()*3.0+1.2;
-    else if(rF>0.65) siz[i]=Math.random()*3.8+1.8;
-    else siz[i]=Math.random()*4.5+2.0;
+    let px=r*sp*Math.cos(th),py=r*Math.cos(ph),pz=r*sp*Math.sin(th);
+    // ── CORE BIAS: inner particles shift toward the other soul ──
+    // Strength inversely proportional to shell radius — core moves most, shell stays spherical
+    const biasStr=(1-rF)*(1-rF)*0.8; // inner core (rF~0.12) gets ~0.62, outer shell (rF~0.98) gets ~0.0003
+    px+=bias.x*biasStr*SOUL_RADIUS;
+    py+=bias.y*biasStr*SOUL_RADIUS;
+    pz+=bias.z*biasStr*SOUL_RADIUS;
+    pos[i*3]=px;pos[i*3+1]=py;pos[i*3+2]=pz;
+    if(rF>0.92) siz[i]=Math.random()*2.0+1.2;
+    else if(rF>0.80) siz[i]=Math.random()*2.5+1.5;
+    else if(rF>0.65) siz[i]=Math.random()*3.0+2.0;
+    else siz[i]=Math.random()*4.0+2.5;
     phase[i]=Math.random()*6.28;depth[i]=rF;
     const mc=new THREE.Color();
     if(Math.random()<0.20)mc.setHSL(ghostHue+(Math.random()-0.5)*0.06,0.25+Math.random()*0.25,0.75+Math.random()*0.2);
@@ -299,44 +527,45 @@ function createSoul(ghostHue){
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
     uniforms:{uTime:{value:0},pixelRatio:{value:PR},uBreath:{value:0.3},uExcite:{value:0.03},
       uTurb:{value:0.15},uHueShift:{value:0},uProximity:{value:0},uColorExchange:{value:0},uExchangeHue:{value:0},uBrightness:{value:1.0},
-      uFieldStr:{value:0.0},uFieldPhase:{value:0.0},uOtherPos:{value:new THREE.Vector3()}},
+      uFieldStr:{value:0.0},uFieldPhase:{value:0.0},uOtherPos:{value:new THREE.Vector3()},
+      uSyncPhase:{value:0.0},uMergeGlow:{value:0.0},uDecay:{value:0.0},uFocalZ:{value:initFocalZ}},
     vertexShader:`
       attribute vec3 color;attribute float size,aPhase,aDepth;
       uniform float uTime,pixelRatio,uBreath,uExcite,uTurb,uHueShift,uProximity,uColorExchange,uExchangeHue,uBrightness;
       uniform float uFieldStr,uFieldPhase;
+      uniform float uSyncPhase,uMergeGlow,uDecay,uFocalZ;
       uniform vec3 uOtherPos;
-      varying vec3 vColor;varying float vAlpha,vDepth;
+      varying vec3 vColor;varying float vAlpha,vDepth,vDofSharp;
       vec3 hsl2rgb(float h,float s,float l){vec3 rgb=clamp(abs(mod(h*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0,0.0,1.0);return l+s*(rgb-0.5)*(1.0-abs(2.0*l-1.0));}
 
       // ── CURL-LIKE FLOW FIELD ──
       // Creates large-scale coherent vortical structures
       vec3 flowField(vec3 p, float t, float phase){
-        // Primary toroidal vortex — particles pushed into ring-like orbits
+        // Primary toroidal vortex — particles pulled into visible ring orbits
         float r=length(p.xz);
         float theta=atan(p.z,p.x);
-        // Toroidal displacement: push outward from y-axis, compress along y
-        float torusR=1.8+0.6*sin(t*0.15+phase);
-        float torusPull=(r-torusR)*0.4;
+        // Toroidal displacement: strong ring pull, visibly flattens into disc
+        float torusR=1.4+0.6*sin(t*0.1+phase);
+        float torusPull=(r-torusR)*0.8;
         vec3 radial=vec3(p.x,0.0,p.z)/(r+0.001);
-        vec3 torusForce=-radial*torusPull+vec3(0.0,-p.y*0.3,0.0);
+        vec3 torusForce=-radial*torusPull+vec3(0.0,-p.y*0.6,0.0);
 
-        // Swirl — rotation around y-axis, speed varies with height
-        float swirlSpeed=0.15+0.1*sin(t*0.08+phase*2.0);
-        float heightSwirl=1.0+p.y*0.3;
+        // Swirl — tangential rotation, sheared by height for visible spin
+        float swirlSpeed=0.4+0.3*sin(t*0.05+phase*2.0);
+        float heightSwirl=1.0+p.y*0.6;
         vec3 tangent=vec3(-p.z,0.0,p.x)/(r+0.001);
         vec3 swirlForce=tangent*swirlSpeed*heightSwirl;
 
-        // Secondary vortex — tilted, creates figure-8 / intersection feel
+        // Secondary tilted vortex — creates figure-8 intersection feel
         float r2=length(p.xy);
-        float theta2=atan(p.y,p.x);
         vec3 tangent2=vec3(-p.y,p.x,0.0)/(r2+0.001);
-        float secondaryStr=0.3*sin(t*0.12+phase*3.0+1.5);
+        float secondaryStr=0.6*sin(t*0.08+phase*3.0+1.5);
         vec3 secondaryForce=tangent2*secondaryStr;
 
-        // Compression waves — periodic squeezing along different axes
-        float wave1=sin(t*0.1+phase)*sin(p.y*1.5+t*0.2);
-        float wave2=cos(t*0.08+phase*1.7)*sin(p.x*1.2+t*0.15);
-        vec3 compressionForce=vec3(wave2*0.2,wave1*0.3,wave1*wave2*0.15);
+        // Compression waves — visible periodic squeezing
+        float wave1=sin(t*0.07+phase)*sin(p.y*1.5+t*0.12);
+        float wave2=cos(t*0.06+phase*1.7)*sin(p.x*1.2+t*0.1);
+        vec3 compressionForce=vec3(wave2*0.5,wave1*0.7,wave1*wave2*0.35);
 
         return torusForce+swirlForce+secondaryForce+compressionForce;
       }
@@ -344,50 +573,55 @@ function createSoul(ghostHue){
       void main(){
         vec3 p=position;
 
-        // ── GENTLE ORGANIC DRIFT (always present) ──
-        p.x+=sin(uTime*0.3+aPhase+p.y*0.8)*0.08;
-        p.y+=cos(uTime*0.25+aPhase+p.z*0.6)*0.06;
-        p.z+=sin(uTime*0.2+aPhase*1.3+p.x*0.6)*0.05;
+        // ── GENTLE ORGANIC DRIFT (subtle — flow field dominates form) ──
+        p.x+=sin(uTime*0.3+aPhase+p.y*0.8)*0.04;
+        p.y+=cos(uTime*0.25+aPhase+p.z*0.6)*0.03;
+        p.z+=sin(uTime*0.2+aPhase*1.3+p.x*0.6)*0.03;
 
         // ── BREATH: radial pulse ──
         float d=length(p);
-        float breathAmp=uBreath*(0.08+uProximity*0.12);
+        float breathAmp=uBreath*(0.1+uProximity*0.15);
         p*=1.0+sin(uTime*0.3+d*2.0+aPhase*0.5)*breathAmp;
 
         // ── COHERENT FLOW FIELD TURBULENCE ──
-        // This is the life-force: large-scale deformation that reshapes the soul
-        // Outer particles affected more (life disrupts the surface, core holds)
-        float fieldWeight=(1.0-aDepth*0.7)*uFieldStr;
+        // Life-force: large-scale deformation that reshapes the soul
+        // Outer shell deforms most (surface disrupted by life), core holds form
+        float fieldWeight=(0.3+aDepth*0.7)*uFieldStr;
         vec3 field=flowField(p,uTime,uFieldPhase);
-        p+=field*fieldWeight*0.8;
+        p+=field*fieldWeight;
 
         // ── CROSS-SOUL FIELD INFLUENCE ──
-        // The other soul's presence warps the local field
+        // The other soul's presence warps the local field — visible reaching
         vec3 toOther=uOtherPos-p;
         float otherDist=length(toOther);
         if(otherDist>0.1){
-          float influence=uProximity*0.3/(1.0+otherDist*0.5);
-          // Particles on the facing side get pulled slightly toward the other
+          float influence=uProximity*0.5/(1.0+otherDist*0.4);
+          // Particles on the facing side get pulled toward the other
           vec3 pullDir=normalize(toOther);
           float facing=dot(normalize(p),pullDir);
-          float facingWeight=max(0.0,facing)*influence*(1.0-aDepth);
-          p+=pullDir*facingWeight*0.4;
+          float facingWeight=max(0.0,facing)*influence*(0.3+aDepth*0.7);
+          p+=pullDir*facingWeight*0.7;
         }
 
         // ── FINE TURBULENCE (existing noise layer) ──
+        // ── FINE TURBULENCE (subtle shimmer, not form-breaking) ──
         float turbAmt=uTurb*(1.0-aDepth*0.5);
-        p.x+=sin(uTime*0.8+aPhase*3.0+p.y*3.0)*turbAmt*0.12;
-        p.y+=cos(uTime*0.7+aPhase*2.5+p.z*3.0)*turbAmt*0.1;
-        p.z+=sin(uTime*0.6+aPhase*2.0+p.x*3.0)*turbAmt*0.08;
+        p.x+=sin(uTime*0.8+aPhase*3.0+p.y*3.0)*turbAmt*0.06;
+        p.y+=cos(uTime*0.7+aPhase*2.5+p.z*3.0)*turbAmt*0.05;
+        p.z+=sin(uTime*0.6+aPhase*2.0+p.x*3.0)*turbAmt*0.04;
 
         // ── EXCITEMENT ──
-        p+=vec3(sin(uTime*1.2+aPhase*5.0),cos(uTime*1.0+aPhase*4.5),sin(uTime*0.8+aPhase*4.0))*uExcite*(1.0-aDepth)*0.2;
+        p+=vec3(sin(uTime*1.2+aPhase*5.0),cos(uTime*1.0+aPhase*4.5),sin(uTime*0.8+aPhase*4.0))*uExcite*(1.0-aDepth)*0.12;
 
         // ── SWELL ──
-        p*=1.0+uProximity*0.15;
+        p*=1.0+uProximity*0.08;
 
         // ── TWINKLE ──
-        float twinkle=0.35+0.65*pow(sin(uTime*2.0+aPhase)*0.5+0.5,2.0);
+        // ── TWINKLE with phase sync during merge ──
+        float personalPhase=uTime*2.0+aPhase;
+        float sharedPhase=uTime*2.0; // all particles breathe as one
+        float syncedPhase=mix(personalPhase,sharedPhase,uSyncPhase);
+        float twinkle=0.35+0.65*pow(sin(syncedPhase)*0.5+0.5,2.0);
         float depthGlow=1.0-aDepth*0.35;
 
         // ── COLOR ──
@@ -396,24 +630,136 @@ function createSoul(ghostHue){
         vec3 baseCol=mix(color,shiftCol,colorMix*0.4);
         vec3 exchCol=hsl2rgb(uExchangeHue,0.2+uProximity*0.1,0.85);
         vColor=mix(baseCol,exchCol,uColorExchange*(0.3+aDepth*0.4));
+        // Merge glow: whiten and brighten during merge
+        vColor=mix(vColor,vec3(1.0,0.98,0.95),uMergeGlow*0.4);
 
-        vDepth=aDepth;vAlpha=twinkle*depthGlow*0.85*uBrightness;
+        vDepth=aDepth;
+
+        // ── IMPERMANENCE — particles erode over time ──
+        // Outer shell goes first. Core holds longest. Each particle has its own moment.
+        // Proximity slows the clock — connection sustains, but can't stop it.
+        float effectiveDecay=uDecay*(1.0-uProximity*0.15);
+        // mortality: outer (high aDepth) erodes early, core (low aDepth) resists
+        // aPhase adds per-particle variation so they don't vanish in unison
+        float mortality=smoothstep(0.0,1.0,effectiveDecay*(0.4+aDepth)+(aPhase/6.28-0.5)*0.25);
+        float alive=1.0-mortality;
+
+        vAlpha=twinkle*depthGlow*(0.75+uMergeGlow*0.35)*uBrightness*alive;
         vec4 mv=modelViewMatrix*vec4(p,1.0);
-        gl_PointSize=size*(0.65+0.35*twinkle)*(1.0+uProximity*0.2)*uBrightness*pixelRatio*(10.0/-mv.z);
+
+        // ── DEPTH OF FIELD — photographic focus falloff ──
+        // Particles near focal plane stay sharp. Front/back soften and dim.
+        // Like shooting f/2 Zeiss — organic separation, not binary.
+        float viewZ=mv.z; // negative in view space
+        float focalDist=abs(viewZ-uFocalZ);
+        float dofSharp=1.0-smoothstep(0.0,6.0,focalDist); // sharp zone ±6 units
+        float dofAlpha=0.35+0.65*dofSharp; // out-of-focus dims to 35%
+        float dofSize=1.0+(1.0-dofSharp)*0.25; // out-of-focus grows slightly (circle of confusion)
+
+        vAlpha*=dofAlpha;
+        vDofSharp=dofSharp;
+        gl_PointSize=max(0.0,size*(0.6+0.3*twinkle)*(1.0+uProximity*0.1)*uBrightness*alive*dofSize*pixelRatio*(16.0/-mv.z));
         gl_Position=projectionMatrix*mv;
       }`,
     fragmentShader:`
-      varying vec3 vColor;varying float vAlpha,vDepth;
+      varying vec3 vColor;varying float vAlpha,vDepth,vDofSharp;
       void main(){float d=length(gl_PointCoord-0.5);
-        float core=1.0-smoothstep(0.0,0.08,d);float mid=1.0-smoothstep(0.04,0.25,d);float halo=1.0-smoothstep(0.1,0.5,d);
-        float a=(core*0.9+mid*0.25+halo*0.12)*vAlpha*(1.0-vDepth*0.5);
-        gl_FragColor=vec4(vColor+core*0.4,a);}`
+        // DOF softens edges: in-focus = tight core, out-of-focus = wider halo (bokeh)
+        float softness=0.08+0.12*(1.0-vDofSharp); // core edge widens out of focus
+        float core=1.0-smoothstep(0.0,softness,d);
+        float mid=1.0-smoothstep(softness*0.5,0.25+0.1*(1.0-vDofSharp),d);
+        float halo=1.0-smoothstep(0.1,0.5,d);
+        float a=(core*0.8+mid*0.22+halo*0.1)*vAlpha*(1.0-vDepth*0.5);
+        gl_FragColor=vec4(vColor+core*0.3,a);}`
   });
   return new THREE.Points(geo,mat);
 }
-let soulA=createSoul(0.08),soulB=createSoul(0.92);
+let soulA=createSoul(0.08,new THREE.Vector3(1,0,0)),soulB=createSoul(0.92,new THREE.Vector3(-1,0,0));
 scene.add(soulA);scene.add(soulB);
+// Shader compile check
+[soulA,soulB].forEach((s,i)=>{
+  renderer.compile(scene,camera);
+  const gl=renderer.getContext();
+  const prog=renderer.properties.get(s.material).currentProgram;
+  if(prog){const p=prog.program;
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
+      console.error('Soul '+i+' shader LINK error:',gl.getProgramInfoLog(p));
+      console.error('VS:',gl.getShaderInfoLog(gl.getAttachedShaders(p)[0]));
+      console.error('FS:',gl.getShaderInfoLog(gl.getAttachedShaders(p)[1]));
+    }else{console.log('Soul '+i+' shader compiled OK')}
+  }
+});
 function eU(m,n,t,dt,s){m.uniforms[n].value+=(t-m.uniforms[n].value)*dt*(s||1)}
+
+// ─── PERMANENT PARTICLE TRANSFER ─────────────────────────────────
+// After each merge, particles physically move between souls.
+// Source particles shrink to nothing. Target particles appear with source color.
+// This is irreversible. The souls carry each other forward.
+
+function transferParticles(fromSoul,toSoul,fromPos,toPos,count){
+  const fGeo=fromSoul.geometry,tGeo=toSoul.geometry;
+  const fPos=fGeo.attributes.position.array,fCol=fGeo.attributes.color.array;
+  const fSiz=fGeo.attributes.size.array,fDep=fGeo.attributes.aDepth.array;
+  const tPos=tGeo.attributes.position.array,tCol=tGeo.attributes.color.array;
+  const tSiz=tGeo.attributes.size.array,tPh=tGeo.attributes.aPhase.array;
+  const tDep=tGeo.attributes.aDepth.array;
+
+  // Find outer-shell particles from source (most visible, most meaningful to lose)
+  const srcCandidates=[];
+  for(let i=0;i<SC;i++){
+    if(fDep[i]>0.80&&fSiz[i]>0.5) srcCandidates.push(i); // outer shell, not already transferred away
+  }
+  // Find outer-shell particles in target to overwrite (they become the new arrivals)
+  const dstCandidates=[];
+  for(let i=0;i<SC;i++){
+    if(tDep[i]>0.80&&tSiz[i]>0.5) dstCandidates.push(i);
+  }
+
+  // Shuffle both
+  for(let i=srcCandidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[srcCandidates[i],srcCandidates[j]]=[srcCandidates[j],srcCandidates[i]]}
+  for(let i=dstCandidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[dstCandidates[i],dstCandidates[j]]=[dstCandidates[j],dstCandidates[i]]}
+
+  const actual=Math.min(count,srcCandidates.length,dstCandidates.length);
+  if(actual===0)return 0;
+
+  for(let n=0;n<actual;n++){
+    const si=srcCandidates[n]; // source particle index
+    const di=dstCandidates[n]; // destination particle index to overwrite
+
+    // Get source particle's world position
+    const wx=fPos[si*3]+fromPos.x;
+    const wy=fPos[si*3+1]+fromPos.y;
+    const wz=fPos[si*3+2]+fromPos.z;
+
+    // Write into target's local space
+    tPos[di*3]=wx-toPos.x;
+    tPos[di*3+1]=wy-toPos.y;
+    tPos[di*3+2]=wz-toPos.z;
+
+    // Target gets source's color (the carried trace)
+    tCol[di*3]=fCol[si*3];
+    tCol[di*3+1]=fCol[si*3+1];
+    tCol[di*3+2]=fCol[si*3+2];
+
+    // Slightly brighter and larger than average — these are scars, they should be visible
+    tSiz[di]=2.5+Math.random()*2.5;
+    tPh[di]=Math.random()*6.28;
+    tDep[di]=0.92+Math.random()*0.08; // outer shell position
+
+    // Source particle: shrink to nothing (it's gone, given to the other)
+    fSiz[si]=0;
+  }
+
+  // Mark all buffers dirty
+  fGeo.attributes.size.needsUpdate=true;
+  tGeo.attributes.position.needsUpdate=true;
+  tGeo.attributes.color.needsUpdate=true;
+  tGeo.attributes.size.needsUpdate=true;
+  tGeo.attributes.aPhase.needsUpdate=true;
+  tGeo.attributes.aDepth.needsUpdate=true;
+
+  return actual;
+}
 
 // ─── RED THREAD RIBBON ───────────────────────────────────────────
 const RS=100,rGeo=new THREE.BufferGeometry();
@@ -422,14 +768,14 @@ for(let i=0;i<RS-1;i++){const a=i*2,b=i*2+1,c=(i+1)*2,d=(i+1)*2+1;rI.push(a,c,b,
 rGeo.setAttribute('position',new THREE.BufferAttribute(rV,3));
 rGeo.setAttribute('uv',new THREE.BufferAttribute(rUv,2));rGeo.setIndex(rI);
 const rMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
-  uniforms:{time:{value:0}},
+  uniforms:{time:{value:0},uOpacity:{value:1.0}},
   vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
-  fragmentShader:`uniform float time;varying vec2 vUv;void main(){
+  fragmentShader:`uniform float time,uOpacity;varying vec2 vUv;void main(){
     float edge=1.0-abs(vUv.y-0.5)*2.0;float along=pow(sin(vUv.x*3.14159),0.5);
     float pulse=0.7+0.3*sin(time*0.5+vUv.x*4.0);float shimmer=0.8+0.2*sin(vUv.x*25.0-time*2.5);
     vec3 col=mix(vec3(0.7,0.1,0.06),vec3(1.0,0.3,0.15),edge*0.6+0.2);
     float glow=smoothstep(0.5,0.0,abs(vUv.y-0.5)*2.0)*0.3;
-    gl_FragColor=vec4(col+glow*vec3(0.3,0.05,0.02),edge*along*pulse*shimmer*0.55+glow*along*0.15);}`});
+    gl_FragColor=vec4(col+glow*vec3(0.3,0.05,0.02),(edge*along*pulse*shimmer*0.55+glow*along*0.15)*uOpacity);}`});
 scene.add(new THREE.Mesh(rGeo,rMat));
 // Tendrils
 const TTC=28,TTS=20,ttGeo=new THREE.BufferGeometry();
@@ -466,18 +812,18 @@ function updateRibbon(t){
     for(let j=0;j<TTS;j++){const f=j/(TTS-1),idx=(i*TTS+j)*3,r=f*len;
       const wave=Math.sin(f*6.28+t*s.freq+s.phase)*r*0.3;
       ttPos[idx]=origin.x+cU.x*r*s.side+cR.x*wave;ttPos[idx+1]=origin.y+cU.y*r*s.side+cR.y*wave;ttPos[idx+2]=origin.z+cU.z*r*s.side+cR.z*wave;
-      ttAlp[i*TTS+j]=Math.pow(1-f,2.5)*str*(0.4+0.6*(Math.sin(t*s.freq*0.3+s.phase)*0.5+0.5))}}
+      ttAlp[i*TTS+j]=Math.pow(1-f,2.5)*str*(0.4+0.6*(Math.sin(t*s.freq*0.3+s.phase)*0.5+0.5))*rMat.uniforms.uOpacity.value}}
   ttGeo.attributes.position.needsUpdate=true;ttGeo.attributes.alpha.needsUpdate=true;
 }
 
 // ─── TRAILS ──────────────────────────────────────────────────────
 const TL=100;
 function createTrail(){const geo=new THREE.BufferGeometry();const pos=new Float32Array(TL*3),alp=new Float32Array(TL),siz=new Float32Array(TL);
-  for(let i=0;i<TL;i++){alp[i]=0;siz[i]=Math.max(0.3,(1-i/TL)*3.5)}
+  for(let i=0;i<TL;i++){alp[i]=0;siz[i]=Math.max(0.2,(1-i/TL)*2.5)}
   geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('alpha',new THREE.BufferAttribute(alp,1));geo.setAttribute('size',new THREE.BufferAttribute(siz,1));
   const mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,uniforms:{pixelRatio:{value:PR}},
     vertexShader:`attribute float alpha,size;uniform float pixelRatio;varying float vA;void main(){vA=alpha;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=size*pixelRatio*(5.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
-    fragmentShader:`varying float vA;void main(){float d=length(gl_PointCoord-0.5);gl_FragColor=vec4(0.9,0.88,0.85,smoothstep(0.5,0.0,d)*vA*0.55);}`});
+    fragmentShader:`varying float vA;void main(){float d=length(gl_PointCoord-0.5);gl_FragColor=vec4(0.9,0.88,0.85,smoothstep(0.5,0.0,d)*vA*0.35);}`});
   const pts=new THREE.Points(geo,mat);pts.userData={history:[],geo,pos,alp};return pts}
 const trA=createTrail(),trB=createTrail();scene.add(trA);scene.add(trB);
 function updateTr(trail,cP){const u=trail.userData;u.history.unshift(cP.clone());if(u.history.length>TL)u.history.pop();
@@ -493,12 +839,12 @@ for(let i=0;i<RING_COUNT;i++){const geo=new THREE.BufferGeometry();const pos=new
   const line=new THREE.LineLoop(geo,mat);line.visible=false;scene.add(line);
   rings.push({line,mat,active:false,age:0,maxAge:3,startR:0.3,endR:5,origin:new THREE.Vector3(),isRed:i%3===0})}
 function spawnRing(origin,big){for(const r of rings){if(!r.active){r.active=true;r.age=0;r.maxAge=big?2.5:3.5;
-  r.startR=big?0.5:0.3;r.endR=big?8:5;r.origin.copy(origin);r.line.visible=true;r.line.position.copy(origin);r.line.lookAt(camera.position);
+  r.startR=big?0.4:0.2;r.endR=big?5:3.5;r.origin.copy(origin);r.line.visible=true;r.line.position.copy(origin);r.line.lookAt(camera.position);
   r.mat.color.setRGB(r.isRed?0.9:0.85,r.isRed?0.2:0.82,r.isRed?0.12:0.78);return}}}
 function updateRings(dt){for(const r of rings){if(!r.active)continue;r.age+=dt;
   if(r.age>=r.maxAge){r.active=false;r.line.visible=false;r.mat.opacity=0;continue}
   const prog=r.age/r.maxAge;r.line.scale.setScalar(r.startR+(r.endR-r.startR)*Math.pow(prog,0.5));
-  r.line.lookAt(camera.position);r.mat.opacity=(prog<0.1?(prog/0.1):Math.pow(1-prog,2))*0.25}}
+  r.line.lookAt(camera.position);r.mat.opacity=(prog<0.1?(prog/0.1):Math.pow(1-prog,2))*0.15}}
 
 // ─── EJECTION STREAKS ────────────────────────────────────────────
 const EJ_COUNT=60,EJ_TAIL=12,ejGeo=new THREE.BufferGeometry();
@@ -528,18 +874,164 @@ function updateEj(dt){for(let i=0;i<EJ_COUNT;i++){const p=ejP[i];
     ejAlp[i*EJ_TAIL+j]=fade*Math.pow(1-j/EJ_TAIL,2.5)*0.7;ejSiz[i*EJ_TAIL+j]=p.baseSize*(1-j/EJ_TAIL*0.7)*Math.max(0.2,1-prog*0.6)}}
   ejGeo.attributes.position.needsUpdate=true;ejGeo.attributes.alpha.needsUpdate=true;ejGeo.attributes.size.needsUpdate=true}
 
-// ─── [4] CONVERGENCE — 4 stages + color exchange ─────────────────
+// ─── [4] CONVERGENCE — 4 stages + MYTHIC EVENTS ─────────────────
 let convStage=0,cumProx=0,burstFlashAlpha=0,lastProx=0;
+let decayAccum=0;
 let convFade=0,convTimer=0;
 let mergeTimer=0,mergeActive=false,exchangeAmount=0;
+// Mythic event state
+let soulMerging=false,mergeProgress=0; // A: soul merge
+let exhausting=false,exhaleTimer=0;     // C: memory exhale
+let lastMythicTime=-999; // cooldown tracker
+let stage3FirstHit=false;
 const convTextEl=document.getElementById('conv-text');
-const CONV_T=[6,18,35,45]; // thresholds
+const CONV_T=CFG.convT; // thresholds
 const CONV_Q=[
   ["something here is not accidental","the distance is learning your name","closer now — can you feel it pulling?"],
   ["this is the frequency just before recognition","two orbits, one center of gravity","almost. almost. almost.","every near-miss was practice for this"],
   ["there you are.","缘分 — it was always this.","recognized. finally."],
   ["changed by the encounter. carrying something of the other forward.","what remains is not what you expected. it is what you needed."],
 ];
+
+// ── A: SOUL MERGE ──
+function triggerSoulMerge(t){
+  if(soulMerging||t-lastMythicTime<CFG.mythicCooldown)return;
+  soulMerging=true;mergeProgress=0;lastMythicTime=t;
+  mergeCount++;
+  // Convergence text
+  convTimer=0;convFade=1;
+  // ── MERGE DIFFERENTIATION: text and audio escalate with merge count ──
+  const mergeTexts=mergeCount<=1?
+    ['two becoming one. for a moment.','synchronized.','the same breath.']:
+    mergeCount<=3?
+    ['deeper now.','the boundary thins.','closer than last time.','this is not the first time.']:
+    ['there is no boundary.','一体 — one body.','how many times until we stop counting?','we were never separate.'];
+  convTextEl.textContent=mergeTexts[Math.floor(Math.random()*mergeTexts.length)];
+  // Audio: chord complexity and density escalates with merge count
+  if(audioReady&&pianoSynth){
+    const mergeChords=[
+      ['C4','E4','G4','B4','E5'],                           // 1st merge: simple maj7
+      ['C4','E4','G4','B4','D5','E5'],                      // 2nd: add9
+      ['C3','G3','C4','E4','G4','B4','D5','E5'],            // 3rd: full voicing
+      ['C3','E3','G3','C4','E4','G4','B4','D5','E5','G5'],  // 4th+: cathedral
+    ];
+    const chordIdx=Math.min(mergeCount-1,mergeChords.length-1);
+    pianoSynth.triggerAttackRelease(mergeChords[chordIdx],'2n',undefined,0.3+mergeCount*0.04);
+    if(padSynth){
+      const padChord=mergeCount>=3?['C3','G3','C4','E4','G4']:['C3','G3','C4','E4'];
+      padSynth.triggerAttackRelease(padChord,'1n',undefined,0.15+mergeCount*0.03);
+    }
+  }
+}
+
+function updateSoulMerge(dt){
+  if(!soulMerging){
+    // Decay sync and glow when not merging
+    eU(soulA.material,'uSyncPhase',0,dt,2);eU(soulB.material,'uSyncPhase',0,dt,2);
+    eU(soulA.material,'uMergeGlow',0,dt,2);eU(soulB.material,'uMergeGlow',0,dt,2);
+    // Ribbon restores
+    rMat.uniforms.uOpacity.value+=(1-rMat.uniforms.uOpacity.value)*dt*2;
+    return;
+  }
+  mergeProgress+=dt;
+  const dur=6; // total merge duration
+  let syncAmt=0,glowAmt=0,ribbonFade=1;
+
+  if(mergeProgress<1.5){
+    // Phase 1: sync builds, glow rises, ribbon fades
+    const p=mergeProgress/1.5;
+    syncAmt=p*p; // ease in
+    glowAmt=p*0.35;
+    ribbonFade=1-p;
+  }else if(mergeProgress<4.5){
+    // Phase 2: full sync, souls overlapping, ribbon gone
+    syncAmt=1;
+    glowAmt=0.35+Math.sin(mergeProgress*3)*0.1; // pulse
+    ribbonFade=0;
+  }else if(mergeProgress<dur){
+    // Phase 3: desync, ribbon returns, glow fades
+    const p=(mergeProgress-4.5)/(dur-4.5);
+    syncAmt=1-p*p;
+    glowAmt=0.35*(1-p);
+    ribbonFade=p;
+  }else{
+    soulMerging=false;syncAmt=0;glowAmt=0;ribbonFade=1;
+
+    // ── PERMANENT PARTICLE TRANSFER — scales with merge count ──
+    // More particles exchanged each successive merge
+    const mergeScale=1+Math.min(mergeCount-1,4)*0.3; // up to 2.2x at merge 5+
+    const transferCount=Math.round(TRANSFER_PER_MERGE*mergeScale);
+    if(transfersFromA<MAX_TRANSFERS){
+      const n=transferParticles(soulA,soulB,posA,posB,transferCount);
+      transfersFromA+=n;
+    }
+    if(transfersFromB<MAX_TRANSFERS){
+      const n=transferParticles(soulB,soulA,posB,posA,transferCount);
+      transfersFromB+=n;
+    }
+
+    // Ejection burst on separation — escalates
+    const ejCount=4+mergeCount*2;
+    for(let i=0;i<ejCount;i++){spawnEj(posA,null);spawnEj(posB,null)}
+    const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
+    spawnRing(mid,true);
+    if(mergeCount>=3){spawnRing(posA,true);spawnRing(posB,true)} // extra rings at 3+
+    burstFlashAlpha=0.08+mergeCount*0.02;
+    // Transfer visual cue: brightness scales with merge count
+    soulA.material.uniforms.uMergeGlow.value=0.5+mergeCount*0.08;
+    soulB.material.uniforms.uMergeGlow.value=0.5+mergeCount*0.08;
+    soulA.material.uniforms.uBrightness.value=1.6+mergeCount*0.1;
+    soulB.material.uniforms.uBrightness.value=1.6+mergeCount*0.1;
+
+    // Convergence text acknowledges the exchange
+    convTimer=0;convFade=1;
+    const totalExchanged=transfersFromA+transfersFromB;
+    if(totalExchanged<=600){
+      convTextEl.textContent=['something was left behind.','not the same as before.','carrying each other now.'][Math.floor(Math.random()*3)];
+    }else if(totalExchanged<=1800){
+      convTextEl.textContent=['more of you in me now.','the boundary dissolves.','whose light is this?'][Math.floor(Math.random()*3)];
+    }else{
+      convTextEl.textContent=['we are mostly each other.','where do you end and i begin?','原来如此 — so it was always this.'][Math.floor(Math.random()*3)];
+    }
+  }
+  // Apply
+  eU(soulA.material,'uSyncPhase',syncAmt,dt,3);
+  eU(soulB.material,'uSyncPhase',syncAmt,dt,3);
+  eU(soulA.material,'uMergeGlow',glowAmt,dt,3);
+  eU(soulB.material,'uMergeGlow',glowAmt,dt,3);
+  rMat.uniforms.uOpacity.value+=(ribbonFade-rMat.uniforms.uOpacity.value)*dt*4;
+}
+
+// ── C: MEMORY EXHALE ──
+function triggerMemoryExhale(t){
+  if(exhausting||t-lastMythicTime<CFG.mythicCooldown)return;
+  exhausting=true;exhaleTimer=0;lastMythicTime=t;
+  // Spawn 15-18 memories simultaneously from both souls
+  const count=10+Math.floor(Math.random()*4);
+  for(let i=0;i<count;i++){
+    const fromA=Math.random()>0.5;
+    spawnM(fromA?posA:posB,fromA?posB:posA,fromA);
+  }
+  // Burst flash
+  burstFlashAlpha=0.06;
+  // Audio: rapid arpeggiated notes
+  if(audioReady&&pianoSynth){
+    const notes=['C4','E4','G4','B4','C5','E5','G5'];
+    notes.forEach((n,i)=>{
+      setTimeout(()=>{pianoSynth.triggerAttackRelease(n,'8n',undefined,0.15+i*0.03)},i*120);
+    });
+  }
+  // Text
+  convTimer=0;convFade=1;
+  convTextEl.textContent=['everything, all at once.','a lifetime in a breath.','the space between them, full.'][Math.floor(Math.random()*3)];
+}
+
+function updateMemoryExhale(dt){
+  if(!exhausting)return;
+  exhaleTimer+=dt;
+  if(exhaleTimer>12){exhausting=false} // returns to calm after 12s
+}
+
 function updateConv(prox,dt,t){
   if(prox>0.3) cumProx+=dt*(0.5+prox*1.5);else cumProx=Math.max(0,cumProx-dt*0.05);
   const prev=convStage;
@@ -553,32 +1045,53 @@ function updateConv(prox,dt,t){
     const pool=CONV_Q[convStage-1];
     convTextEl.textContent=pool[Math.floor(Math.random()*pool.length)];
     if(convStage>=2){const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
-      for(let i=0;i<convStage*4;i++){spawnEj(posA,null);spawnEj(posB,null)}
+      for(let i=0;i<convStage*2;i++){spawnEj(posA,null);spawnEj(posB,null)}
       for(let i=0;i<convStage;i++)spawnRing(mid,true);
-      burstFlashAlpha=0.08+convStage*0.05;
+      burstFlashAlpha=0.05+convStage*0.03;
       trigConvChord(convStage);
     }
-    if(convStage===4){mergeActive=true;mergeTimer=0}
+    // Stage 3 first hit → memory exhale
+    if(convStage===3&&!stage3FirstHit){stage3FirstHit=true;triggerMemoryExhale(t)}
+    // Stage 4 → soul merge
+    if(convStage===4){mergeActive=true;mergeTimer=0;triggerSoulMerge(t)}
   }
-  // Stage 4: merge + color exchange
+  // Stage 4: color exchange
   if(mergeActive){mergeTimer+=dt;
     if(mergeTimer<4) exchangeAmount=Math.min(1,exchangeAmount+dt*0.5);
     else{mergeActive=false}
   }
-  // Smooth exchange (never fully resets — permanent trace)
   const exchTarget=mergeActive?exchangeAmount:Math.max(0.25,exchangeAmount-dt*0.02);
   exchangeAmount=exchTarget;
   soulA.material.uniforms.uColorExchange.value=exchangeAmount;
   soulB.material.uniforms.uColorExchange.value=exchangeAmount;
-  // Exchange hues (A gets B's hue, B gets A's)
   const hueA=((t*0.012)%1.0+0.08)%1.0,hueB=((t*0.012+0.5)%1.0+0.92)%1.0;
-  soulA.material.uniforms.uExchangeHue.value=hueB; // A takes B's color
-  soulB.material.uniforms.uExchangeHue.value=hueA; // B takes A's color
+  soulA.material.uniforms.uExchangeHue.value=hueB;
+  soulB.material.uniforms.uExchangeHue.value=hueA;
+
+  // Rare mythic events: random trigger every 3-5 minutes
+  if(t-lastMythicTime>CFG.mythicAutoMin+Math.random()*CFG.mythicAutoRange&&prox>0.3){
+    // Pick one at random
+    if(Math.random()>0.5)triggerSoulMerge(t);else triggerMemoryExhale(t);
+  }
 
   convTimer+=dt;if(convTimer>8)convFade=Math.max(0,convFade-dt*0.3);
   const alpha=convFade*0.22;
   convTextEl.style.color=`rgba(255,255,255,${alpha})`;
   convTextEl.style.filter=`blur(${Math.max(0,6-alpha*28)}px)`;
+
+  // Update mythic systems
+  updateSoulMerge(dt);
+  updateMemoryExhale(dt);
+
+  // During merge: pull souls toward each other (acts on positions directly)
+  if(soulMerging&&mergeProgress>0.5&&mergeProgress<5){
+    const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
+    const mergePull=mergeProgress<1.5?((mergeProgress-0.5)/1.0)*0.6:
+                    mergeProgress>4.5?((5-mergeProgress)/0.5)*0.6:0.6;
+    posA.lerp(mid,mergePull*dt*3);
+    posB.lerp(mid,mergePull*dt*3);
+    soulA.position.copy(posA);soulB.position.copy(posB);
+  }
 }
 
 // ─── [2] MEMORIES — blurred italic text, no UI boxes ─────────────
@@ -601,6 +1114,9 @@ const memTexts=[
   "the work isn't finished","every system outlives its maker",
   "a life designed, not drifted","what i could become",
   "orbit, not arrival","almost, then everything",
+  // impermanence-aware
+  "this too","even the beautiful things erode","the fade is part of the form",
+  "nothing was wasted","what dissolves was still real",
 ];
 const MC=35,mGeo=new THREE.BufferGeometry();
 const mPos=new Float32Array(MC*3),mAlp=new Float32Array(MC),mSiz=new Float32Array(MC),mCol=new Float32Array(MC*3);
@@ -631,7 +1147,7 @@ function spawnM(src,dst,fromA){for(let i=0;i<MC;i++){if(mSt[i].active)continue;c
   s.active=true;s.lifetime=0;s.maxLife=8+Math.random()*10;s.fromA=fromA;s.text=pickM();s.arrived=false;
   const off=new THREE.Vector3((Math.random()-0.5)*0.8,(Math.random()-0.5)*0.8,(Math.random()-0.5)*0.4);
   mPos[i*3]=src.x+off.x;mPos[i*3+1]=src.y+off.y;mPos[i*3+2]=src.z+off.z;
-  s.origSize=1.2+Math.random()*1.8;mSiz[i]=s.origSize;
+  s.origSize=0.8+Math.random()*1.2;mSiz[i]=s.origSize;
   const w=0.85+Math.random()*0.15;mCol[i*3]=w;mCol[i*3+1]=w;mCol[i*3+2]=w*0.93;
   const dir=new THREE.Vector3().subVectors(dst,src).normalize();
   mVel[i].copy(dir).multiplyScalar(0.08+Math.random()*0.1);
@@ -654,7 +1170,7 @@ function updateMems(t,dt){
     mVel[i].x+=Math.sin(t*0.4+i*0.7)*dt*0.005;mVel[i].y+=Math.cos(t*0.35+i*0.9)*dt*0.005;
     mPos[i*3]+=mVel[i].x*dt*1.2;mPos[i*3+1]+=mVel[i].y*dt*1.2;mPos[i*3+2]+=mVel[i].z*dt;
     let a;if(prog<0.15)a=prog/0.15;else if(prog>0.6)a=Math.pow((1-prog)/0.4,1.8);else a=1;
-    mAlp[i]=a*0.7;mSiz[i]=s.origSize*Math.max(0.08,1-prog*0.85);
+    mAlp[i]=a*0.5;mSiz[i]=s.origSize*Math.max(0.08,1-prog*0.85);
   }
   mGeo.attributes.position.needsUpdate=true;mGeo.attributes.alpha.needsUpdate=true;
   mGeo.attributes.size.needsUpdate=true;mGeo.attributes.color.needsUpdate=true;
@@ -675,77 +1191,232 @@ function updateMems(t,dt){
 
 // ─── TYPOGRAPHY (CJK anchors only) ───────────────────────────────
 const typoLayer=document.getElementById('typo-layer');
-const typoAnchors=[{char:'縁',x:'12%',y:'18%',size:120,blur:6,maxA:0.06,rot:-8},
-  {char:'運命',x:'78%',y:'72%',size:85,blur:4,maxA:0.05,rot:5},
-  {char:'絆',x:'8%',y:'78%',size:95,blur:5,maxA:0.045,rot:-3}];
+const typoAnchors=[{char:'縁',x:'12%',y:'18%',size:120,blur:6,maxA:0.08,rot:-8},
+  {char:'運命',x:'78%',y:'72%',size:85,blur:4,maxA:0.07,rot:5},
+  {char:'絆',x:'8%',y:'78%',size:95,blur:5,maxA:0.065,rot:-3}];
 const typoEls=[];
 for(const a of typoAnchors){const el=document.createElement('div');el.className='typo-anchor';
   el.textContent=a.char;el.style.fontSize=a.size+'px';el.style.filter=`blur(${a.blur}px)`;
   el.style.left=a.x;el.style.top=a.y;typoLayer.appendChild(el);typoEls.push({el,...a,curA:0})}
-function updateTypo(t){for(let i=0;i<typoEls.length;i++){const a=typoEls[i];
-  const pulse=0.5+0.5*Math.sin(t*0.06+i*2.5);a.curA+=(a.maxA*pulse-a.curA)*0.01;
-  a.el.style.opacity=String(a.curA);a.el.style.transform=`rotate(${a.rot+Math.sin(t*0.03+i)*2}deg)`}}
+function updateTypo(t){
+  const gDecay=soulA.material.uniforms.uDecay.value;
+  const proxBoost=1+currentProx*0.5+convStage*0.15; // glow when souls are close
+  const decayFade=1-gDecay*0.6;
+  for(let i=0;i<typoEls.length;i++){const a=typoEls[i];
+  const pulse=0.5+0.5*Math.sin(t*0.06+i*2.5);a.curA+=(a.maxA*pulse*proxBoost*decayFade-a.curA)*0.01;
+  const scale=1+currentProx*0.02*Math.sin(t*0.1+i); // subtle proximity pulse
+  a.el.style.opacity=String(a.curA);
+  a.el.style.transform=`rotate(${a.rot+Math.sin(t*0.03+i)*2}deg) scale(${scale})`;
+  // Decay: blur increases as things fade
+  a.el.style.filter=`blur(${a.blur+gDecay*3}px)`;
+}}
 
-// ─── [1] COMPOSITIONAL AUDIO ─────────────────────────────────────
-let audioReady=false,pianoSynth,bassSynth,padSynth,rev,master;
-// Scale: minor when apart, resolves to major when close
-const minorNotes=['C4','Eb4','G4','Ab4','C5','Eb5'];
-const majorNotes=['C4','E4','G4','A4','C5','E5','G5'];
-const bassNotes=['C2','G2','C3'];
-let lastNoteTime=0,lastBassTime=0,lastPadChange=0,currentPadChord=null;
+// ─── [1] COMPOSITIONAL AUDIO — FM synthesis, dual reverb, breathing ──
+let audioReady=false,pianoSynth,bassSynth,padSynth,hallRev,roomRev,master,ambientGain;
+let subDrones=[]; // for detuning LFO
+const minorNotes=['C4','Eb4','G4','Ab4','Bb4','C5','Eb5'];
+const majorNotes=['C4','D4','E4','G4','A4','B4','C5','E5','G5'];
+const liminalNotes=['C4','D4','Eb4','G4','Ab4','B4','C5','D5']; // neither major nor minor — transitional
+const bassNotesMinor=['C2','Eb2','Ab2','G2','Bb2','C3'];
+const bassNotesMajor=['C2','D2','F2','G2','A2','C3'];
+const bassNotesLiminal=['C2','Eb2','F2','G2','Bb2'];
+let lastNoteTime=0,lastBassTime=0,lastPadChange=0;
+// Breathing dynamics — notes in phrases, silence between
+let phraseNotes=0,phraseMax=3,phraseSilenceUntil=0;
+let lastPhraseNote='C4'; // voice-leading anchor
 
 async function initAudio(){try{await Tone.start();
-  rev=new Tone.Reverb({decay:14,wet:0.75}).toDestination();
-  master=new Tone.Gain(0.22).connect(rev);
-  // Pad layer: sustained drone that shifts minor → major
+  // ── DUAL REVERB: long hall + short room (parallel) ──
+  hallRev=new Tone.Reverb({decay:22,wet:0.72,preDelay:0.04}).toDestination();
+  roomRev=new Tone.Reverb({decay:3.5,wet:0.45,preDelay:0.01}).toDestination();
+  const delay=new Tone.FeedbackDelay({delayTime:'8n.',feedback:0.18,wet:0.1}).connect(hallRev);
+  // Master splits to both reverbs
+  master=new Tone.Gain(CFG.masterGain);
+  master.connect(hallRev);master.connect(roomRev);
+
+  // ── AMBIENT LAYER: filtered brown noise + sub drone ──
+  ambientGain=new Tone.Gain(0.1).connect(master);
   const noise=new Tone.Noise('brown').start();
-  noise.connect(new Tone.Gain(0.08).connect(new Tone.AutoFilter({frequency:0.025,min:40,max:250,depth:0.8}).connect(master).start()));
-  new Tone.Oscillator({frequency:55,type:'sine',volume:-24}).connect(master).start();
-  // Piano — sparse, emotional
-  pianoSynth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},
-    envelope:{attack:0.06,decay:5,sustain:0,release:7},volume:-20}).connect(rev);
-  // Bass — appears at Stage 2+
-  bassSynth=new Tone.Synth({oscillator:{type:'triangle'},
-    envelope:{attack:0.3,decay:3,sustain:0.1,release:4},volume:-26}).connect(master);
-  // Pad synth — for convergence moments
-  padSynth=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},
-    envelope:{attack:2,decay:6,sustain:0.3,release:8},volume:-28}).connect(rev);
+  const nFilt=new Tone.AutoFilter({frequency:0.02,min:30,max:200,depth:0.85,octaves:3}).connect(ambientGain).start();
+  noise.connect(nFilt);
+  // Sub drone: detuned pair + fifth for warmth — stored for LFO drift
+  const droneA=new Tone.Oscillator({frequency:55,type:'sine',volume:-24}).connect(master).start();
+  const droneB=new Tone.Oscillator({frequency:55.15,type:'sine',volume:-28}).connect(master).start();
+  const droneC=new Tone.Oscillator({frequency:82.4,type:'sine',volume:-30}).connect(master).start();
+  subDrones=[droneA,droneB,droneC];
+
+  // ── PIANO: FM synthesis — bell-like warmth with natural harmonic decay ──
+  // Main FM voice: harmonicity 3.01 gives metallic-warm piano character
+  pianoSynth=new Tone.PolySynth(Tone.FMSynth,{
+    harmonicity:3.01, modulationIndex:2.2,
+    oscillator:{type:'sine'}, modulation:{type:'sine'},
+    envelope:{attack:0.008,decay:8,sustain:0,release:10},
+    modulationEnvelope:{attack:0.002,decay:0.8,sustain:0.12,release:4},
+    volume:-18}).connect(delay);
+  // Harmonic layer: higher harmonicity for shimmer, very quiet
+  const pianoHarm=new Tone.PolySynth(Tone.FMSynth,{
+    harmonicity:5.01, modulationIndex:1.2,
+    oscillator:{type:'sine'}, modulation:{type:'sine'},
+    envelope:{attack:0.004,decay:4,sustain:0,release:6},
+    modulationEnvelope:{attack:0.001,decay:0.4,sustain:0.08,release:3},
+    volume:-28}).connect(hallRev);
+  // Attack texture: filtered noise burst
+  const attackNoise=new Tone.NoiseSynth({noise:{type:'white'},
+    envelope:{attack:0.001,decay:0.06,sustain:0,release:0.04},
+    volume:-38}).connect(new Tone.Filter({frequency:2200,type:'bandpass',Q:1.8}).connect(roomRev));
+  // Ghost layer: very quiet sine one octave below for body
+  const pianoGhost=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},
+    envelope:{attack:0.05,decay:10,sustain:0,release:12},volume:-34}).connect(hallRev);
+
+  // Wrap piano to trigger all layers
+  const _origP=pianoSynth.triggerAttackRelease.bind(pianoSynth);
+  pianoSynth.triggerAttackRelease=function(notes,dur,time,vel){
+    _origP(notes,dur,time,vel);
+    try{
+      const n0=typeof notes==='string'?notes:Array.isArray(notes)?notes[0]:null;
+      if(n0){
+        pianoHarm.triggerAttackRelease(n0,'8n',time,(vel||0.3)*0.25);
+        // Ghost octave below
+        const ghost=n0.replace(/(\d)/,m=>Math.max(2,parseInt(m)-1));
+        pianoGhost.triggerAttackRelease(ghost,'4n',time,(vel||0.3)*0.15);
+      }
+      attackNoise.triggerAttackRelease('32n',time,(vel||0.3)*0.4);
+    }catch(e){}
+  };
+
+  // ── BASS: FM with low harmonicity for warm sub character ──
+  bassSynth=new Tone.FMSynth({
+    harmonicity:1.01, modulationIndex:0.7,
+    oscillator:{type:'sine'}, modulation:{type:'triangle'},
+    envelope:{attack:0.5,decay:5,sustain:0.06,release:6},
+    modulationEnvelope:{attack:0.3,decay:2,sustain:0.08,release:4},
+    volume:-22}).connect(master);
+
+  // ── PAD: FM with chorus detuning for choral wash ──
+  padSynth=new Tone.PolySynth(Tone.FMSynth,{
+    harmonicity:2.01, modulationIndex:0.6,
+    oscillator:{type:'sine'}, modulation:{type:'sine'},
+    envelope:{attack:4,decay:10,sustain:0.3,release:12},
+    modulationEnvelope:{attack:2,decay:6,sustain:0.15,release:8},
+    volume:-24}).connect(hallRev);
+  // Chorus layer: slightly detuned for width
+  const padChorus=new Tone.PolySynth(Tone.FMSynth,{
+    harmonicity:2.01, modulationIndex:0.5,
+    oscillator:{type:'sine',detune:7}, modulation:{type:'sine',detune:-5},
+    envelope:{attack:4.5,decay:10,sustain:0.25,release:12},
+    modulationEnvelope:{attack:2.5,decay:6,sustain:0.12,release:8},
+    volume:-28}).connect(hallRev);
+  const _origPad=padSynth.triggerAttackRelease.bind(padSynth);
+  padSynth.triggerAttackRelease=function(notes,dur,time,vel){
+    _origPad(notes,dur,time,vel);try{padChorus.triggerAttackRelease(notes,dur,time,(vel||0.2)*0.55)}catch(e){}
+  };
+
   audioReady=true}catch(e){console.log('Audio init failed',e)}}
 
+// Voice-leading: pick nearest note to last played for melodic continuity
+function voiceLead(notes,anchor){
+  if(!anchor)return notes[Math.floor(Math.random()*notes.length)];
+  const aNum=Tone.Frequency(anchor).toMidi();
+  let best=notes[0],bestDist=999;
+  for(const n of notes){const d=Math.abs(Tone.Frequency(n).toMidi()-aNum);if(d<bestDist&&d>0){bestDist=d;best=n}}
+  return best;
+}
+
 function updateAudio(t,prox){if(!audioReady)return;
-  // Note selection: interpolate between minor and major by proximity
-  const notes=prox>0.5?majorNotes:prox>0.25?
-    [...minorNotes.slice(0,3),...majorNotes.slice(3)]:minorNotes;
-  // Sparse notes — interval decreases with proximity (more musical activity when close)
-  const noteInterval=Math.max(0.8,3.5-prox*2.5-convStage*0.3);
-  if(t-lastNoteTime>noteInterval){lastNoteTime=t;
-    const note=notes[Math.floor(Math.random()*notes.length)];
-    const vel=0.15+prox*0.15+convStage*0.05;
-    pianoSynth.triggerAttackRelease(note,'4n',undefined,vel);
-    // Occasional harmonizing second note when close
-    if(prox>0.4&&Math.random()<prox*0.5){
-      const n2=notes[(notes.indexOf(note)+2)%notes.length];
-      pianoSynth.triggerAttackRelease(n2,'4n','+0.15',vel*0.7)}
+  // ── DRONE DETUNING LFO — slow pitch drift for organic warmth ──
+  if(subDrones.length>=3){
+    const drift=Math.sin(t*0.017)*0.5+Math.sin(t*0.011)*0.3; // ~60s cycle, complex
+    subDrones[0].frequency.value=55+drift*0.2;
+    subDrones[1].frequency.value=55.15+drift*0.35+Math.sin(t*0.023)*0.15;
+    subDrones[2].frequency.value=82.4+drift*0.25;
   }
-  // Bass appears Stage 2+
-  if(convStage>=2&&t-lastBassTime>6){lastBassTime=t;
-    bassSynth.triggerAttackRelease(bassNotes[Math.floor(Math.random()*bassNotes.length)],'2n',undefined,0.2+convStage*0.05)}
-  // Pad chord shifts with convergence
-  if(convStage>=1&&t-lastPadChange>12){lastPadChange=t;
-    const chords=convStage>=3?[['C4','E4','G4','B4']]:convStage>=2?[['C4','Eb4','G4','Bb4'],['C4','E4','G4']]:
-      [['C4','Eb4','G4'],['Ab3','C4','Eb4']];
-    const chord=chords[Math.floor(Math.random()*chords.length)];
-    padSynth.triggerAttackRelease(chord,'1n',undefined,0.12+convStage*0.03)}
+  // ── PIANO TIMBRE EVOLUTION — modulation index rises with convergence ──
+  if(pianoSynth&&pianoSynth.voices){
+    const modTarget=2.2+convStage*0.5+mergeCount*0.15; // gets richer over time
+    pianoSynth.voices.forEach(v=>{try{v.modulationIndex.value+=(modTarget-v.modulationIndex.value)*0.01}catch(e){}});
+  }
+  // Ambient warmth modulates with proximity
+  if(ambientGain)ambientGain.gain.rampTo(0.08+prox*0.08+convStage*0.02,1);
+  // Note selection: minor → liminal → major with proximity
+  const notes=prox>0.5?majorNotes:prox>0.3?liminalNotes:
+    prox>0.15?[...minorNotes.slice(0,4),...liminalNotes.slice(4)]:minorNotes;
+
+  // ── BREATHING DYNAMICS ──
+  // Notes come in phrases of 2-5, then intentional silence
+  const noteInterval=Math.max(CFG.noteIntervalMin,CFG.noteIntervalBase-prox*2.5-convStage*0.3);
+  const inSilence=t<phraseSilenceUntil;
+
+  if(!inSilence&&t-lastNoteTime>noteInterval){lastNoteTime=t;
+    // Voice-lead from last note for melodic continuity
+    const note=Math.random()<0.7?voiceLead(notes,lastPhraseNote):notes[Math.floor(Math.random()*notes.length)];
+    lastPhraseNote=note;
+    // Velocity humanization: arc within phrase + random variance
+    const phraseArc=Math.sin((phraseNotes/Math.max(1,phraseMax))*Math.PI);
+    const vel=(0.1+prox*0.18+convStage*0.05)*(0.7+phraseArc*0.3)*(0.85+Math.random()*0.3);
+    pianoSynth.triggerAttackRelease(note,'4n',undefined,Math.min(0.5,vel));
+    // Harmonic doubling: more likely at phrase peak
+    if(prox>0.4&&Math.random()<prox*0.4*phraseArc){
+      const n2=voiceLead(notes,note);
+      pianoSynth.triggerAttackRelease(n2,'4n','+0.15',vel*0.5)}
+    // High octave shimmer at convergence peak
+    if(convStage>=3&&Math.random()<0.25){
+      const octUp=note.replace(/\d/,m=>parseInt(m)+1);
+      pianoSynth.triggerAttackRelease(octUp,'8n','+0.1',vel*0.2)}
+    // ── POST-MERGE RESONANCE: after merges, occasional wide-interval leaps ──
+    if(mergeCount>0&&Math.random()<0.12*mergeCount){
+      const leap=notes[Math.floor(Math.random()*notes.length)];
+      pianoSynth.triggerAttackRelease(leap,'8n','+0.3',vel*0.25)}
+
+    // Phrase breathing
+    phraseNotes++;
+    if(phraseNotes>=phraseMax){
+      phraseNotes=0;
+      phraseMax=CFG.phraseMinNotes+Math.floor(Math.random()*(CFG.phraseMaxNotes-CFG.phraseMinNotes+1));
+      // Silence duration: longer when distant, shorter when close
+      const silenceDur=prox>0.5?(CFG.silenceShortMin+Math.random()*CFG.silenceShortMax):
+        (CFG.silenceLongMin+Math.random()*CFG.silenceLongMax);
+      phraseSilenceUntil=t+silenceDur;
+    }
+  }
+
+  // Bass: slower, breathes independently — wider pool with liminal notes
+  if(convStage>=2&&t-lastBassTime>5.5+Math.random()*2){lastBassTime=t;
+    const bVel=(0.16+convStage*0.05)*(0.8+Math.random()*0.4);
+    const bPool=prox>0.5?bassNotesMajor:prox>0.25?bassNotesLiminal:bassNotesMinor;
+    bassSynth.triggerAttackRelease(bPool[Math.floor(Math.random()*bPool.length)],'2n',undefined,bVel)}
+  // Pad: expanded chord vocabulary — richer options per stage
+  if(convStage>=1&&t-lastPadChange>12+Math.random()*4){lastPadChange=t;
+    const chords=convStage>=3?[
+      ['C4','E4','G4','B4'],['A3','C4','E4','G4'],['F3','A3','C4','E4'],
+      ['G3','B3','D4','F4'],['D4','F4','A4','C5'],['E3','G3','B3','D4']
+    ]:convStage>=2?[
+      ['C4','Eb4','G4','Bb4'],['C4','E4','G4'],['Ab3','C4','Eb4','G4'],
+      ['F3','Ab3','C4','Eb4'],['Bb3','D4','F4','Ab4'],['Eb4','G4','Bb4','D5']
+    ]:[
+      ['C4','Eb4','G4'],['Ab3','C4','Eb4'],['Bb3','D4','F4'],
+      ['F3','Ab3','C4'],['Eb3','G3','Bb3'],['G3','Bb3','D4']
+    ];
+    padSynth.triggerAttackRelease(chords[Math.floor(Math.random()*chords.length)],'1n',undefined,
+      (0.08+convStage*0.03)*(0.8+Math.random()*0.4))}
 }
 function trigConvChord(stage){if(!audioReady)return;
-  const chords=[['E4','G4'],['C4','Eb4','G4','Bb4'],['C4','E4','G4','B4','E5'],['C4','E4','G4','C5','E5','G5']];
+  // Chord complexity grows with both stage and merge history
+  const mergeRich=Math.min(mergeCount,3); // 0-3 enrichment levels
+  const chords=[
+    ['E4','G4'],
+    mergeRich>=1?['C4','Eb4','G4','Bb4','D5']:['C4','Eb4','G4','Bb4'],
+    mergeRich>=2?['C4','E4','G4','B4','D5','E5']:['C4','E4','G4','B4','E5'],
+    mergeRich>=3?['C3','C4','E4','G4','B4','C5','E5','G5']:['C4','E4','G4','C5','E5','G5']
+  ];
   pianoSynth.triggerAttackRelease(chords[stage-1]||chords[0],'1n',undefined,0.25+stage*0.05);
-  if(stage>=3)bassSynth.triggerAttackRelease('C2','1n',undefined,0.3)}
+  if(stage>=3)bassSynth.triggerAttackRelease('C2','1n',undefined,0.3);
+  // Post-merge stages: bass gets richer
+  if(stage>=2&&mergeCount>=2)bassSynth.triggerAttackRelease('G1','1n','+0.2',0.15)}
 
 // ─── ORBIT ───────────────────────────────────────────────────────
 function updateTargets(t,dt){
   const f1=0.065,f2=0.045,f3=0.027,f4=0.019;
-  const rB=2.2+Math.sin(t*0.025)*1.0+Math.sin(t*0.012)*0.5;
+  const rB=1.8+Math.sin(t*0.025)*0.8+Math.sin(t*0.012)*0.4;
   const close=Math.sin(t*0.016)*0.5+0.5;
   const stageCloser=convStage*0.12;
   const minS=Math.max(0.15,(0.6+(1-close)*1.2)*(1-stageCloser));
@@ -758,31 +1429,46 @@ function updateTargets(t,dt){
   else{tgtA.set(ax,ay,az);tgtB.set(bx,by,bz)}
 
   const prevPull=pullStr;
-  if(mDown)pullStr=Math.min(1,pullStr+dt*1.2);else pullStr=Math.max(0,pullStr-dt*0.6);
+  if(mDown)pullStr=Math.min(1,pullStr+dt*CFG.pullAccel);else pullStr=Math.max(0,pullStr-dt*CFG.pullDecay);
   if(pullStr>0.01){tgtA.lerp(mW,pullStr*0.35);tgtB.lerp(mW,pullStr*0.28)}
+  // ── REPEL: push souls apart ──
+  if(repelStr>0.05){
+    const repelAmt=repelStr*dt;
+    tgtA.add(repelDir.clone().negate().multiplyScalar(repelAmt));
+    tgtB.add(repelDir.clone().multiplyScalar(repelAmt));
+    repelStr*=Math.max(0,1-dt*CFG.repelDecay*3);
+    // Cumulative proximity takes a hit on repel
+    cumProx=Math.max(0,cumProx-dt*repelStr*0.5);
+  }
   // [3] Earned ring on pull release (snap-back)
   if(prevPull>0.5&&pullStr<0.3&&!mDown){spawnRing(new THREE.Vector3().lerpVectors(posA,posB,0.5),true);wasPulling=false}
   if(mDown&&pullStr>0.5)wasPulling=true;
 
-  spV3(posA,tgtA,velA,mDown?0.7:1.2,dt);spV3(posB,tgtB,velB,mDown?0.7:1.2,dt);
+  spV3(posA,tgtA,velA,mDown?CFG.springKPull:CFG.springK,dt);spV3(posB,tgtB,velB,mDown?CFG.springKPull:CFG.springK,dt);
+  // Cursor awareness: souls lean gently toward cursor before interaction
+  updateCursorAwareness();
+  if(cursorNear>0.05&&!mDown){
+    posA.lerp(mW,cursorNear*CFG.cursorLeanA);
+    posB.lerp(mW,cursorNear*CFG.cursorLeanB);
+  }
   soulA.position.copy(posA);soulB.position.copy(posB);
   dist=posA.distanceTo(posB);const prox=Math.max(0,1-dist/4);
   currentProx=prox;
 
-  // Nonlinear excitement — kicks in hard above 0.4, exponential above 0.6
-  const excitement=prox>0.6?Math.pow((prox-0.4)/0.6,1.8)*2.0:
-                   prox>0.4?Math.pow((prox-0.4)/0.6,1.2)*0.8:0;
+  // Nonlinear excitement — gentle onset above 0.4, moderate above 0.6
+  const excitement=prox>0.6?Math.pow((prox-0.4)/0.6,1.5)*1.0:
+                   prox>0.4?Math.pow((prox-0.4)/0.6,1.2)*0.4:0;
 
-  eU(soulA.material,'uBreath',0.25+prox*0.5+excitement*0.8+pullStr*0.25,dt,0.6);
-  eU(soulB.material,'uBreath',0.25+prox*0.5+excitement*0.8+pullStr*0.25,dt,0.6);
-  eU(soulA.material,'uExcite',0.02+prox*0.15+excitement*0.4+pullStr*0.25,dt,0.7);
-  eU(soulB.material,'uExcite',0.02+prox*0.15+excitement*0.4+pullStr*0.25,dt,0.7);
-  eU(soulA.material,'uTurb',0.1+prox*0.3+excitement*0.5+pullStr*0.3,dt,0.8);
-  eU(soulB.material,'uTurb',0.1+prox*0.3+excitement*0.5+pullStr*0.3,dt,0.8);
-  // Brightness ramp — particles get visibly brighter as souls converge
-  const brightTarget=1.0+excitement*0.6+pullStr*0.2;
-  eU(soulA.material,'uBrightness',brightTarget,dt,1.0);
-  eU(soulB.material,'uBrightness',brightTarget,dt,1.0);
+  eU(soulA.material,'uBreath',0.2+prox*0.3+excitement*0.4+pullStr*0.15,dt,0.5);
+  eU(soulB.material,'uBreath',0.2+prox*0.3+excitement*0.4+pullStr*0.15,dt,0.5);
+  eU(soulA.material,'uExcite',0.01+prox*0.05+excitement*0.1+pullStr*0.1,dt,0.5);
+  eU(soulB.material,'uExcite',0.01+prox*0.05+excitement*0.1+pullStr*0.1,dt,0.5);
+  eU(soulA.material,'uTurb',0.06+prox*0.08+excitement*0.1+pullStr*0.08,dt,0.6);
+  eU(soulB.material,'uTurb',0.06+prox*0.08+excitement*0.1+pullStr*0.08,dt,0.6);
+  // Brightness ramp — subtle glow, not blinding
+  const brightTarget=1.0+excitement*0.25+pullStr*0.1+cursorNear*0.08;
+  eU(soulA.material,'uBrightness',brightTarget,dt,0.8);
+  eU(soulB.material,'uBrightness',brightTarget,dt,0.8);
   const hueA=((t*0.012)%1.0+0.08)%1.0,hueB=((t*0.012+0.5)%1.0+0.92)%1.0;
   soulA.material.uniforms.uHueShift.value=hueA;soulB.material.uniforms.uHueShift.value=hueB;
   soulA.material.uniforms.uProximity.value+=(prox-soulA.material.uniforms.uProximity.value)*dt*4;
@@ -791,13 +1477,13 @@ function updateTargets(t,dt){
   // ── FLOW FIELD: life turbulence ──
   // Slow-cycling strength — ebbs and flows like seasons of disruption
   // Each soul has a different phase so they deform independently
-  const fieldCycleA=Math.sin(t*0.04)*0.5+0.5; // ~25s cycle
-  const fieldCycleB=Math.sin(t*0.04+2.1)*0.5+0.5;
+  const fieldCycleA=Math.sin(t*0.03)*0.5+0.5; // ~33s cycle
+  const fieldCycleB=Math.sin(t*0.03+2.1)*0.5+0.5;
   // Base strength modulated by life-event waves (occasional surges)
-  const surgeA=Math.pow(Math.max(0,Math.sin(t*0.025+0.5)),4)*0.6; // rare intense moments
-  const surgeB=Math.pow(Math.max(0,Math.sin(t*0.025+3.8)),4)*0.6;
-  const fieldA=0.2+fieldCycleA*0.5+surgeA+excitement*0.4;
-  const fieldB=0.2+fieldCycleB*0.5+surgeB+excitement*0.4;
+  const surgeA=Math.pow(Math.max(0,Math.sin(t*0.025+0.5)),4)*0.8; // rare intense moments
+  const surgeB=Math.pow(Math.max(0,Math.sin(t*0.025+3.8)),4)*0.8;
+  const fieldA=0.45+fieldCycleA*0.55+surgeA+excitement*0.3;
+  const fieldB=0.45+fieldCycleB*0.55+surgeB+excitement*0.3;
   eU(soulA.material,'uFieldStr',fieldA,dt,0.8);
   eU(soulB.material,'uFieldStr',fieldB,dt,0.8);
   soulA.material.uniforms.uFieldPhase.value=0.0; // different phase per soul
@@ -808,33 +1494,44 @@ function updateTargets(t,dt){
 
   // Convergence
   updateConv(prox,dt,t);
-  burstFlashAlpha*=Math.max(0,1-dt*3);
-  const stageBoost=convStage*0.15;
-  soulA.material.uniforms.uBreath.value+=stageBoost*0.3;
-  soulB.material.uniforms.uBreath.value+=stageBoost*0.3;
-  // Bloom ramps with both convergence stage AND live excitement
-  compPass.material.uniforms.bStr.value=1.1+stageBoost*0.8+excitement*0.6;
-  // Warm screen glow during excitement (subtle, builds)
-  burstFlashAlpha=Math.max(burstFlashAlpha,excitement*0.04);
+  burstFlashAlpha*=Math.max(0,1-dt*4);
+  const stageBoost=convStage*0.1;
+  soulA.material.uniforms.uBreath.value+=stageBoost*0.15;
+  soulB.material.uniforms.uBreath.value+=stageBoost*0.15;
+  // Bloom: restrained, slight lift with convergence and excitement
+  compPass.material.uniforms.bStr.value=CFG.bloomBase+stageBoost*CFG.bloomConvScale+excitement*CFG.bloomExciteScale;
+  // Warmth tint: cold → warm with convergence progression
+  const warmTarget=convStage*0.15+excitement*0.1+pullStr*0.05;
+  compPass.material.uniforms.warmth.value+=(warmTarget-compPass.material.uniforms.warmth.value)*dt*0.8;
+  // Anamorphic streak: activates during merge and high excitement
+  const streakTarget=(soulMerging?0.6:0)+(excitement>0.4?excitement*0.3:0)+pullStr*0.1;
+  compPass.material.uniforms.streak.value+=(streakTarget-compPass.material.uniforms.streak.value)*dt*2;
+  // Subtle warm glow during excitement
+  burstFlashAlpha=Math.max(burstFlashAlpha,excitement*0.02);
 
-  // Ejections — more frequent when excited, earned ring system supplements
+  // Ejections — less frequent, earned system supplements
   ejSpawnTimer+=dt;
-  const ejRate=excitement>0.3?0.3:2.5-prox*1.0;
+  const ejRate=excitement>0.3?0.6:3.0-prox*1.0;
   if(ejSpawnTimer>ejRate){ejSpawnTimer=0;
-    if(Math.random()>0.3)spawnEj(posA,null);if(Math.random()>0.3)spawnEj(posB,null);
-    // During high excitement, eject toward each other
+    if(Math.random()>0.5)spawnEj(posA,null);if(Math.random()>0.5)spawnEj(posB,null);
     if(excitement>0.5){
       const dirAB=new THREE.Vector3().subVectors(posB,posA).normalize();
       spawnEj(posA,dirAB);spawnEj(posB,dirAB.negate());
     }
   }
-  if(pullStr>0.3&&Math.random()<pullStr*0.25){const d=new THREE.Vector3().subVectors(mW,posA).normalize();spawnEj(posA,d);spawnEj(posB,d)}
+  if(pullStr>0.4&&Math.random()<pullStr*0.15){const d=new THREE.Vector3().subVectors(mW,posA).normalize();spawnEj(posA,d);spawnEj(posB,d)}
 
   lastProx=prox;return prox;
 }
 
-function updateCamera(t){camera.position.x=Math.sin(t*0.02)*1.5;camera.position.y=Math.cos(t*0.015)*0.5;
-  camera.position.z=16+Math.sin(t*0.01)*2;camera.lookAt(0,0,0)}
+function updateCamera(t){
+  // Push camera back on portrait screens (phones), keep intimate on landscape
+  const aspect=W/H;
+  const baseZ=aspect<1?Math.min(20,12/aspect*0.8):12;
+  camera.position.x=Math.sin(t*0.02)*1.5;
+  camera.position.y=Math.cos(t*0.015)*0.5;
+  camera.position.z=baseZ+Math.sin(t*0.01)*2.0;
+  camera.lookAt(0,0,0);camera.updateMatrixWorld(true)}
 
 // ─── RENDER ──────────────────────────────────────────────────────
 function renderPipe(t){
@@ -859,10 +1556,27 @@ function animate(){
   updateRibbon(t);updateMems(t,dt);
   updateTypo(t);updateColorField(t);updateCamera(t);
   drawStars(t);updateQuotes(t);
+  // ── IMPERMANENCE: vignette tightens as world erodes ──
+  const vigDecay=soulA.material.uniforms.uDecay.value;
+  const vigShrink=60-vigDecay*25; // 60% → 35% transparent zone
+  const vigAlpha=0.35+vigDecay*0.3; // 35% → 65% edge darkness
+  document.getElementById('crt-overlay').style.background=
+    `radial-gradient(ellipse at center,transparent ${vigShrink}%,rgba(3,2,6,${vigAlpha}) 100%)`;
   updateAudio(t,prox);
-  if(memSpawned&&audioReady&&pianoSynth){
-    const notes=currentProx>0.4?majorNotes:minorNotes;
-    pianoSynth.triggerAttackRelease(notes[Math.floor(Math.random()*notes.length)],'8n',undefined,0.1+currentProx*0.1)}
+  if(memSpawned&&audioReady&&pianoSynth&&totalTime>=phraseSilenceUntil){
+    const notes=currentProx>0.5?majorNotes:currentProx>0.3?liminalNotes:
+      currentProx>0.15?[...minorNotes.slice(0,4),...liminalNotes.slice(4)]:minorNotes;
+    const n=Math.random()<0.7?voiceLead(notes,lastPhraseNote):notes[Math.floor(Math.random()*notes.length)];
+    pianoSynth.triggerAttackRelease(n,'8n',undefined,0.08+currentProx*0.1);lastPhraseNote=n}
+  // ── IMPERMANENCE: engagement-based erosion ──
+  decayAccum+=dt*Math.max(0.08,1.0-currentProx*0.85);
+  const decayGrace=Math.max(0,decayAccum-CFG.decayGracePeriod);
+  const decayRaw=decayGrace/CFG.decayDuration;
+  const decay=Math.min(1.0,Math.pow(decayRaw,CFG.decayExponent));
+  soulA.material.uniforms.uDecay.value=decay;soulB.material.uniforms.uDecay.value=decay;
+  // ── DOF: focal plane tracks midpoint between souls ──
+  const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5).applyMatrix4(camera.matrixWorldInverse);
+  soulA.material.uniforms.uFocalZ.value=mid.z;soulB.material.uniforms.uFocalZ.value=mid.z;
   soulA.material.uniforms.uTime.value=t;soulB.material.uniforms.uTime.value=t;
   renderPipe(t)}
 animate();
@@ -872,7 +1586,19 @@ window.addEventListener('resize',()=>{W=innerWidth;H=innerHeight;
   mainRT.setSize(Math.floor(W*PR),Math.floor(H*PR));bR1.setSize(Math.floor(W*PR*0.5),Math.floor(H*PR*0.5));
   bR2.setSize(Math.floor(W*PR*0.25),Math.floor(H*PR*0.25));bR3.setSize(Math.floor(W*PR*0.125),Math.floor(H*PR*0.125));
   compPass.material.uniforms.res.value.set(W,H);starCvs.width=W;starCvs.height=H;
-  for(const s of stars){s.x=Math.random()*W;s.y=Math.random()*H}});
+  for(const s of stars){s.baseX=Math.random()*W;s.baseY=Math.random()*H}});
+
+// ─── VISIBILITY API — sleep on tab switch ────────────────────────
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){
+    if(audioReady&&master)master.gain.rampTo(0,0.5);
+    clock.stop();
+  }else{
+    if(audioReady&&master)master.gain.rampTo(CFG.masterGain,1.0);
+    clock.start();
+    clock.getDelta(); // flush accumulated pause time to prevent dt spike
+  }
+});
 </script>
 </body>
 </html>
