@@ -2,7 +2,7 @@
 <html lang="en">
 <!--
   缘分 (Yuánfèn) — Interactive WebGL, generative audio
-  2025 · Michael Leng · V14.2
+  2026 · Michael Leng · Afterimage / V15
 
   An interactive meditation on destined connection.
   The Chinese concept of yuánfèn describes the invisible force
@@ -14,9 +14,9 @@
 -->
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>缘分 — Yuánfèn</title>
-<meta name="description" content="An interactive meditation on destined connection. Two souls orbit, drawn by invisible force.">
+<meta name="description" content="An interactive meditation on affinity and the traces we leave in one another. By Michael Leng.">
 <meta property="og:title" content="缘分 — Yuánfèn">
 <meta property="og:description" content="An interactive meditation on destined connection.">
 <meta property="og:type" content="website">
@@ -59,40 +59,325 @@
   @keyframes cerBreathe{0%,100%{transform:scale(1);opacity:0.3}50%{transform:scale(2.5);opacity:0.7}}
   #webgl-fail{position:fixed;inset:0;z-index:200;background:#030206;display:none;align-items:center;justify-content:center;
     font-family:'Cormorant Garamond',serif;color:rgba(255,255,255,0.4);font-size:1.1rem;font-style:italic;text-align:center;padding:2rem;letter-spacing:0.1em;line-height:2}
+/* Afterimage: restrained gallery typography and accessible controls. */
+:root{color-scheme:dark;--ivory:#e6dfd2;--muted:#a6a4a2;--hairline:rgba(223,214,198,.18)}
+html,body{touch-action:auto}body{background:#05070c;color:var(--ivory);cursor:default}
+button{font:inherit;color:inherit;border:0;border-radius:0;background:none;cursor:pointer;touch-action:manipulation}
+button:focus-visible,a:focus-visible,#interaction-surface:focus-visible{outline:1px solid #cda97d;outline-offset:6px}
+[hidden]{display:none!important}.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#interaction-surface{position:fixed;inset:0;z-index:16;touch-action:none;cursor:crosshair;outline-offset:-8px}
+#color-field,#star-canvas,#typo-layer,#quote-layer,#mem-layer{display:none}
+#mark{left:max(32px,env(safe-area-inset-left));bottom:max(38px,env(safe-area-inset-bottom));opacity:1;animation:none;transition:opacity 1s}
+#mark .zh{color:#c9c3b8;font-size:22px;letter-spacing:.25em}#mark .sub{font-size:12px;color:#aaa59d;letter-spacing:.2em;margin-top:8px}
+body:not(.entered) #mark,body:not(.entered) #instructions{opacity:0}
+#instructions{left:auto;right:34px;bottom:40px;color:#a5a3a4;font-size:10px;letter-spacing:.08em;animation:none;line-height:1.8;max-width:330px;text-align:right;transition:opacity 1s}
+#exhibition-controls{position:fixed;right:26px;top:max(20px,env(safe-area-inset-top));z-index:50;display:flex;align-items:center;gap:4px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#b9b6af}
+#exhibition-controls button{padding:12px 10px;transition:color .3s}#exhibition-controls button:hover{color:#fff4df}.control-dot{opacity:.4}
+#stage{position:fixed;top:34px;left:34px;z-index:20;display:flex;align-items:center;gap:15px;font:10px 'Share Tech Mono',monospace;letter-spacing:.18em;text-transform:uppercase;color:#b9b6af}.stage-rule{width:27px;height:1px;background:var(--hairline)}
+#conv-layer{z-index:15;align-items:flex-end;padding-bottom:18vh}#conv-text{font-size:clamp(18px,2vw,25px);font-style:italic;color:#ded3c0!important;filter:none!important;opacity:0;transition:opacity 1s;max-width:80%;letter-spacing:.04em}
+#ceremony{background:radial-gradient(ellipse at 48% 42%,rgba(33,32,38,.65),rgba(5,7,12,.97) 69%);overflow:hidden;cursor:default;transition:opacity 1.8s;isolation:isolate}
+.edition-label{position:absolute;top:34px;left:36px;font:9px 'Share Tech Mono',monospace;letter-spacing:.18em;color:#a6a4a2}
+.ceremony-content{position:relative;text-align:center;z-index:2;margin-top:10px;padding:24px}
+.intro-eyebrow{font:10px 'Share Tech Mono',monospace;letter-spacing:.23em;color:#aaa8a2}
+#ceremony h1{font-family:'Noto Serif SC','Songti SC',serif;font-weight:200;font-size:clamp(65px,8vw,110px);letter-spacing:.26em;padding-left:.26em;line-height:1.25;margin-top:27px;color:#e4ded1}
+.pronunciation{font-style:italic;font-size:21px;letter-spacing:.18em;margin-top:14px;color:#b6b1a7}
+.intro-rule{width:28px;height:1px;background:#9e7d63;margin:29px auto}
+.intro-line{font-size:clamp(27px,3.1vw,42px);font-weight:300;line-height:1.12;letter-spacing:-.015em}.intro-line em{color:#d4b99b;font-weight:300}
+.intro-definition{font-size:16px;line-height:1.6;color:#afaca6;margin:18px 0 26px}
+.entry-actions{display:flex;justify-content:center;align-items:center;gap:22px;margin-top:26px}.entry-actions button{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.05em;min-height:45px;padding:12px 0;border-bottom:1px solid rgba(230,208,180,.45)}.entry-actions button:first-child{color:#e2c9a7}.entry-actions button span{margin-left:24px}.entry-actions button+button{color:#a6a4a0;border-bottom-color:transparent}.entry-actions button:hover{color:#fff}
+.intro-note{font-size:12px;color:#aaa7a1;letter-spacing:.04em;margin-top:24px;line-height:1.6}
+.intro-footer{position:absolute;bottom:32px;left:36px;right:36px;display:flex;justify-content:space-between;font:9px 'Share Tech Mono',monospace;letter-spacing:.15em;color:#a5a3a1}
+.ceremony-orbits{position:absolute;inset:0;z-index:0;opacity:.36;pointer-events:none}.ceremony-orbits i{position:absolute;left:calc(50% - 380px);top:calc(48% - 270px);width:510px;height:540px;border:1px solid rgba(215,166,107,.24);border-radius:50%;transform:rotate(-25deg);box-shadow:0 0 70px rgba(156,109,68,.025),inset 0 0 60px rgba(177,123,66,.025)}.ceremony-orbits i+i{left:calc(50% - 130px);border-color:rgba(115,174,197,.23);transform:rotate(25deg)}.ceremony-orbits b{position:absolute;left:24%;top:50%;width:3px;height:3px;border-radius:50%;background:#d9ba8d;box-shadow:0 0 16px 3px #9f764366}
+#pause-label{position:fixed;inset:0;z-index:25;display:grid;place-items:center;pointer-events:none;background:rgba(5,7,12,.4);font-size:26px;font-style:italic;color:#c3b6a6}
+#about{max-width:570px;width:calc(100% - 36px);max-height:calc(100dvh - 48px);margin:auto;padding:48px 44px 32px;color:var(--ivory);border:1px solid var(--hairline);background:#0b0d13;line-height:1.6;box-shadow:0 30px 120px #0008;overflow:auto;touch-action:pan-y}#about::backdrop{background:rgba(2,4,9,.82);backdrop-filter:blur(8px)}
+.close-button{position:absolute;right:13px;top:7px;font:28px Georgia,serif;padding:8px 12px;color:#bbb}#about h2{font-size:34px;font-weight:300;margin:22px 0}#about p:not(.intro-eyebrow):not(.credit){font-size:18px;color:#c2bdb3;margin:16px 0}#about dl{display:grid;grid-template-columns:100px 1fr;gap:10px;font:11px/1.6 'Share Tech Mono',monospace;margin:28px 0;padding-top:22px;border-top:1px solid var(--hairline);color:#b7b6b1}#about dt{color:#dec3a1}.credit{font:9px 'Share Tech Mono',monospace;letter-spacing:.1em;color:#999}
+#ending{position:fixed;inset:0;z-index:80;background:rgba(5,7,12,.97);display:flex;align-items:center;justify-content:center;gap:5vw;padding:36px;animation:endIn 4s both}#trace-preview{width:min(43vw,520px)}#trace-preview svg{width:100%;height:auto}.ending-copy{max-width:350px}#ending h2{font-size:clamp(44px,5.5vw,78px);line-height:1.02;font-weight:300;margin:30px 0}#ending h2 em{color:#d4b99b;font-weight:300}#ending-line{font-size:20px;line-height:1.5;color:#bfb8ae}#ending .entry-actions{justify-content:flex-start}#ending .intro-note{font-size:12px}
+@keyframes endIn{from{opacity:0}to{opacity:1}}
+.gentle *, .gentle *::before, .gentle *::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+@media(max-width:700px){#exhibition-controls{top:12px;right:10px;left:10px;justify-content:flex-end;font-size:10px;gap:0}#exhibition-controls button{padding:12px 7px}#fullscreen-toggle{display:none}#stage{top:68px;left:22px;font-size:9px}#mark{left:22px;bottom:28px}#instructions{right:22px;bottom:28px;font-size:9px;max-width:215px}#mark .zh{font-size:19px}#mark .sub{font-size:10px}#conv-layer{padding-bottom:23vh}.edition-label{left:22px;top:24px;font-size:8px}.intro-footer{left:22px;right:22px;font-size:8px;bottom:24px}.intro-definition{font-size:14px}.intro-note{font-size:11px}.ceremony-orbits{transform:scale(.72)}#about{padding:45px 25px 26px}#ending{flex-direction:column;gap:0;padding:24px}#trace-preview{width:min(62vw,280px);margin-top:-24px}.ending-copy{text-align:center;max-width:340px}#ending h2{font-size:45px;margin:16px 0}#ending-line{font-size:18px}#ending .entry-actions{justify-content:center}.ending-copy .intro-eyebrow{font-size:8px}}
+@media(max-height:660px){.intro-eyebrow{font-size:8px}#ceremony h1{font-size:58px;margin-top:12px}.pronunciation{font-size:17px;margin-top:7px}.intro-rule{margin:18px auto}.intro-line{font-size:27px}.intro-definition{margin:13px 0}.entry-actions{margin-top:12px}.intro-note{margin-top:12px}.edition-label{top:18px}.intro-footer{bottom:18px}#trace-preview{max-height:42vh}#trace-preview svg{max-height:42vh}#ending{overflow:auto}.ending-copy .intro-note{display:none}}
+
 </style>
 </head>
 <body>
-<main role="img" aria-label="Yuánfèn — interactive audio-visual meditation" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">
-  <h1>缘分 — Yuánfèn</h1>
-  <p>An interactive audio-visual meditation on destined connection. Two glowing spheres of particles orbit each other in space. Holding your pointer acts as gravity, pulling them together. Double-tapping pushes them apart. As they draw close, the music shifts from minor to major. When they merge, they permanently exchange particles — carrying pieces of each other forward. Over time, the particles slowly erode — a meditation on impermanence.</p>
-</main>
 <div id="color-field"></div>
 <canvas id="star-canvas" aria-hidden="true"></canvas>
 <div id="crt-overlay"></div>
 <div id="typo-layer"></div>
 <div id="quote-layer"></div>
 <div id="mark"><div class="zh">缘分</div><div class="sub">yuánfèn</div></div>
-<div id="instructions">hold to pull · release to let go · double-tap to push apart</div>
+<div id="instructions">hold / Space to draw near<br>release to let go · double-tap / ↓ to separate</div>
 <div id="mem-layer"></div>
 <div id="conv-layer"><div id="conv-text"></div></div>
 
-<div id="webgl-fail">this piece requires WebGL.<br>please try a modern browser.</div>
+<div id="webgl-fail">The artwork could not start in this browser.<br>Please reload or try another browser.</div>
 
-<div id="ceremony" class="loading">
-  <div style="width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.3);margin-bottom:40px;animation:cerBreathe 4s ease-in-out infinite"></div>
-  <div id="cer-l1" style="font-family:'Cormorant Garamond',serif;font-size:clamp(0.7rem,1.5vw,1rem);font-weight:300;font-style:italic;color:rgba(255,255,255,0);letter-spacing:0.15em;text-align:center;line-height:2;transition:color 3s ease"></div>
-  <div id="cer-l2" style="font-family:'Noto Serif SC',serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:200;color:rgba(255,255,255,0);letter-spacing:0.4em;margin:30px 0 15px;transition:color 3s ease;text-shadow:0 0 60px rgba(255,255,255,0.05)"></div>
-  <div id="cer-l3" style="font-family:'Cormorant Garamond',serif;font-size:clamp(0.6rem,1.2vw,0.8rem);font-weight:300;color:rgba(255,255,255,0);letter-spacing:0.3em;text-align:center;line-height:2;transition:color 3s ease"></div>
-  <div id="cer-go" style="font-family:'Share Tech Mono',monospace;font-size:7px;color:rgba(255,255,255,0);letter-spacing:0.25em;text-transform:uppercase;margin-top:50px;transition:color 2s ease"></div>
+<div id="interaction-surface" tabindex="0" role="application" aria-label="Yuánfèn interactive artwork" aria-describedby="accessible-guide"></div>
+<div id="accessible-guide" class="sr-only">Hold the pointer or Space to draw the two presences together. Release to let them move freely. Double-tap or press the down arrow to separate them. After contact each carries visible traces of the other. The work lasts about four and a half minutes. Sound, pause and gentle-motion controls are available above the artwork.</div>
+<div id="live-status" class="sr-only" role="status" aria-live="polite"></div>
+<nav id="exhibition-controls" aria-label="Experience controls" hidden>
+  <button id="sound-toggle" type="button" aria-pressed="false">Sound off</button><span class="control-dot" aria-hidden="true">·</span>
+  <button id="pause-toggle" type="button" aria-pressed="false">Pause</button>
+  <button id="motion-toggle" type="button" aria-pressed="false">Full motion</button>
+  <button id="about-toggle" type="button">About</button>
+  <button id="fullscreen-toggle" type="button">Fullscreen</button>
+</nav>
+<div id="stage" hidden aria-hidden="true"><span id="chapter-index">I</span><span class="stage-rule"></span><span id="chapter-name">Orbit</span></div>
+<div id="pause-label" hidden>the world can wait.</div>
+<div id="ceremony">
+  <div class="edition-label">AN INTERACTIVE MEDITATION BY MICHAEL LENG</div>
+  <div class="ceremony-orbits" aria-hidden="true"><i></i><i></i><b></b></div>
+  <div class="ceremony-content">
+    <p class="intro-eyebrow">ON THE THINGS WE CARRY</p>
+    <h1 lang="zh">缘分</h1>
+    <p class="pronunciation">yuánfèn</p>
+    <div class="intro-rule"></div>
+    <p class="intro-line">Some encounters<br><em>stay with us.</em></p>
+    <p class="intro-definition">The affinity that brings two lives together.</p>
+    <div class="entry-actions"><button id="enter-sound" type="button">Enter with sound <span aria-hidden="true">↗</span></button><button id="enter-quiet" type="button">Enter quietly</button></div>
+    <p class="intro-note">Headphones recommended · Allow a few unhurried minutes</p>
+  </div>
+  <div class="intro-footer"><span>HOLD TO DRAW NEAR</span><span>RELEASE TO LET GO</span></div>
 </div>
+<dialog id="about" aria-labelledby="about-title">
+  <button id="about-close" class="close-button" type="button" aria-label="Close about">×</button>
+  <p class="intro-eyebrow">A NOTE ON THE WORK</p>
+  <h2 id="about-title">To meet is to change.</h2>
+  <p>Yuánfèn is an interactive meditation on affinity, agency, and the traces we leave in one another.</p>
+  <p>Draw the two presences closer. Give them space. Their movement belongs partly to you, and partly to themselves. When they meet, each carries a little of the other forward.</p>
+  <p>There is no correct ending.</p>
+  <dl><dt>Draw near</dt><dd>Hold the pointer or Space</dd><dt>Let go</dt><dd>Release</dd><dt>Separate</dt><dd>Double-tap or ↓</dd><dt>Duration</dt><dd>About 4½ minutes; pause whenever you like</dd></dl>
+  <p class="credit">MICHAEL LENG · YUÁNFÈN / AFTERIMAGE</p>
+</dialog>
+<section id="ending" hidden aria-labelledby="ending-title">
+  <div id="trace-preview"></div>
+  <div class="ending-copy"><p class="intro-eyebrow">WHAT REMAINS</p><h2 id="ending-title">Apart.<br><em>Still altered.</em></h2><p id="ending-line"></p><div class="entry-actions"><button id="keep-trace" type="button">Keep a trace <span aria-hidden="true">↗</span></button><button id="begin-again" type="button">Begin again</button></div><p class="intro-note">A constellation from this encounter, yours to keep.</p></div>
+</section>
 
+<script id="experience-core">
+// Yuánfèn / Afterimage. Shared dramaturgy, input and sound for both renderers.
+class Encounter {
+  constructor(){
+    this.age=0;this.contact=0;this.encounters=0;this.merging=false;this.mergeTime=0;
+    this.afterglow=0;this.cooldown=0;this.pressure=0;this.decay=0;this.ended=false;
+    this.separationSeen=false;this.events=[];this.seed=Math.random()*1000;
+  }
+  step(dt,proximity,held){
+    this.events=[];if(this.ended)return this.events;
+    this.age+=dt;this.cooldown=Math.max(0,this.cooldown-dt);
+    this.afterglow=Math.max(0,this.afterglow-dt);
+    this.pressure=Math.max(0,Math.min(1,this.pressure+dt*(held?0.023:-0.10)));
+    if(this.merging){
+      this.mergeTime+=dt;
+      if(this.mergeTime>=6){
+        this.merging=false;this.encounters++;this.afterglow=16;this.cooldown=28;
+        this.contact=0;this.events.push('exchange');
+      }
+    }else if(!this.cooldown&&this.age<230){
+      // Brief encounters accumulate gently. Holding cannot skip the encounter itself.
+      this.contact=Math.max(0,this.contact+dt*(proximity>.38?(proximity-.30)*1.8:-.14));
+      if(this.contact>=(this.encounters?19:12)){
+        this.merging=true;this.mergeTime=0;this.events.push('encounter');
+      }
+    }
+    if(this.encounters&&!this.separationSeen&&proximity<.28){
+      this.separationSeen=true;this.events.push('separation');
+    }
+    // A legible 4½-minute arc. Neither contact nor separation is punished.
+    this.decay=Math.pow(Math.max(0,Math.min(1,(this.age-150)/120)),1.35);
+    if(this.age>=270){this.ended=true;this.merging=false;this.events.push('ending');}
+    return this.events;
+  }
+  get chapter(){return this.age>=150?3:this.encounters?2:this.contact>3||this.merging?1:0;}
+}
+class SoundField {
+  constructor(){this.ctx=null;this.ready=false;this.enabled=false;this.lastNote=-9;this.nextGap=3;this.phrase=0;this.silenceUntil=0;this.voice=0;}
+  async start(){
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+    if(!this.ctx){
+      const c=this.ctx=new AC();
+      this.output=c.createGain();this.output.gain.value=0;
+      const limiter=c.createDynamicsCompressor();limiter.threshold.value=-14;limiter.knee.value=16;limiter.ratio.value=5;limiter.attack.value=.01;limiter.release.value=.3;
+      this.output.connect(limiter);limiter.connect(c.destination);
+      const reverb=c.createConvolver(),seconds=3.6,buf=c.createBuffer(2,c.sampleRate*seconds,c.sampleRate);
+      for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3)*.4;}
+      reverb.buffer=buf;const wet=c.createGain();wet.gain.value=.35;reverb.connect(wet);wet.connect(this.output);this.reverb=reverb;
+      this.drone=c.createGain();this.drone.gain.value=.012;this.drone.connect(this.output);
+      [65.406,98.06].forEach((f,i)=>{const o=c.createOscillator();o.frequency.value=f;o.detune.value=i?1.5:-1.5;o.connect(this.drone);o.start();});
+      this.ready=true;
+    }
+    try{await this.ctx.resume();return this.ctx.state==='running';}catch{return false;}
+  }
+  gate(on){
+    if(!this.ctx)return;const t=this.ctx.currentTime,g=this.output.gain;
+    g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(on?.42:0,t+.35);
+  }
+  note(freq,velocity=.08,pan=0,offset=0){
+    if(!this.ready||!this.enabled)return;
+    const c=this.ctx,t=c.currentTime+offset,env=c.createGain(),p=c.createStereoPanner();p.pan.value=pan;
+    env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(velocity,t+.016);env.gain.exponentialRampToValueAtTime(.0001,t+5);
+    env.connect(p);p.connect(this.output);p.connect(this.reverb);
+    const partials=[1,2.001,3.005],oscs=[];
+    partials.forEach((ratio,i)=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=freq*ratio;g.gain.value=[.75,.18,.045][i];o.connect(g);g.connect(env);o.start(t);o.stop(t+5.1);oscs.push([o,g]);});
+    oscs[0][0].onended=()=>{for(const[o,g]of oscs){o.disconnect();g.disconnect();}env.disconnect();p.disconnect();};
+  }
+  tick(s,prox){
+    if(!this.ready||!this.enabled||s.ended)return;
+    if(s.events.includes('exchange')){this.silenceUntil=s.age+5;this.drone.gain.setTargetAtTime(.002,this.ctx.currentTime,.8);}
+    if(s.age<this.silenceUntil)return;
+    this.drone.gain.setTargetAtTime(.007*(1-s.decay),this.ctx.currentTime,1);
+    if(s.age-this.lastNote<this.nextGap)return;
+    this.lastNote=s.age;this.nextGap=2.3+Math.random()*2.4+2*s.decay;
+    // Each presence has a motif. After contact, it sometimes remembers the other's.
+    const motifs=[[196,293.665,329.628,440],[220,261.626,391.995,523.251]];
+    this.voice=1-this.voice;const borrowed=s.encounters&&Math.random()<Math.min(.45,s.encounters*.14);
+    const pool=motifs[borrowed?1-this.voice:this.voice];
+    this.note(pool[Math.floor(Math.random()*pool.length)],(.055+Math.random()*.025)*(1-s.decay*.8),(this.voice?1:-1)*(.72-prox*.55));
+    if(++this.phrase>=3){this.phrase=0;this.silenceUntil=s.age+4+Math.random()*4;}
+  }
+}
+const experience={state:new Encounter(),audio:new SoundField(),started:false,paused:false,held:false,repel:0,pointer:{x:0,y:0},reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,renderer:null,lastChapter:-1,captionUntil:0,modal:false};
+const $=id=>document.getElementById(id);
+function releaseInput(){experience.held=false;}
+function syncSound(){experience.audio.gate(experience.audio.enabled&&experience.started&&!experience.paused&&!experience.modal&&!document.hidden&&!experience.state.ended);}
+function syncControls(){
+  $('sound-toggle').textContent=experience.audio.enabled?'Sound on':'Sound off';
+  $('sound-toggle').setAttribute('aria-pressed',String(experience.audio.enabled));
+  $('pause-toggle').textContent=experience.paused?'Resume':'Pause';
+  $('pause-toggle').setAttribute('aria-pressed',String(experience.paused));
+  $('motion-toggle').textContent=experience.reduced?'Gentle motion':'Full motion';
+  $('motion-toggle').setAttribute('aria-pressed',String(experience.reduced));syncSound();
+}
+async function enterPiece(withSound){
+  if(experience.started)return;
+  experience.started=true;experience.audio.enabled=withSound;
+  $('ceremony').classList.add('farewell');$('ceremony').inert=true;
+  $('exhibition-controls').hidden=false;$('stage').hidden=false;
+  document.body.classList.add('entered');$('interaction-surface').focus({preventScroll:true});
+  if(withSound){const ok=await experience.audio.start();if(!ok){experience.audio.enabled=false;announce('Sound could not start. You can continue quietly or try Sound again.');}}
+  syncControls();
+}
+function announce(message){$('live-status').textContent=message;}
+function caption(message){$('conv-text').textContent=message;experience.captionUntil=experience.state.age+7;announce(message);}
+function advanceExperience(dt,prox){
+  const s=experience.state,events=s.step(dt,prox,experience.held);
+  if(s.chapter!==experience.lastChapter){
+    experience.lastChapter=s.chapter;
+    $('chapter-index').textContent=['I','II','III','IV'][s.chapter];
+    $('chapter-name').textContent=['Orbit','Recognition','Afterimage','Impermanence'][s.chapter];
+  }
+  if(events.includes('exchange')&&s.encounters===1)caption('something of you stays with me.');
+  if(events.includes('separation'))caption('apart. still altered.');
+  $('conv-text').style.opacity=String(Math.min(1,Math.max(0,(experience.captionUntil-s.age)/2))*.65);
+  experience.audio.tick(s,prox);
+  if(events.includes('ending'))endPiece();
+  return events;
+}
+function endPiece(){
+  releaseInput();syncSound();$('ending').hidden=false;$('ending').classList.add('visible');
+  $('ending-line').textContent=experience.state.encounters?'you leave carrying something you did not arrive with.':'even the distance became part of you.';
+  $('trace-preview').innerHTML=makeTrace(true);$('exhibition-controls').hidden=true;$('stage').hidden=true;
+  $('keep-trace').focus({preventScroll:true});announce('The encounter has ended. Keep a trace, or begin again.');
+}
+function makeTrace(preview=false){
+  let seed=Math.floor(experience.state.seed*100000)+experience.state.encounters*101;
+  const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const paths=[],dots=[];const n=experience.state.encounters;
+  for(let k=0;k<2;k++){
+    for(let line=0;line<18;line++){
+      const points=[];for(let i=0;i<=160;i++){const a=i/160*Math.PI*2,r=125+line*1.6+Math.sin(a*3+line*.18)*12;
+        points.push(`${(350+k*220+Math.cos(a)*r).toFixed(2)},${(375+Math.sin(a)*r*.8+Math.sin(a*2+line*.1)*22).toFixed(2)}`);}
+      paths.push(`<polyline points="${points.join(' ')}" fill="none" stroke="${k?'#9bc8d3':'#e6b987'}" stroke-width=".6" opacity=".22"/>`);
+    }
+    for(let i=0;i<280;i++){const a=rnd()*Math.PI*2,r=125+rnd()*30,borrowed=n&&i<Math.min(100,n*24);dots.push(`<circle cx="${350+k*220+Math.cos(a)*r}" cy="${375+Math.sin(a)*r*.8}" r="${borrowed?1.8:.7}" fill="${(k? !borrowed:borrowed)?'#9bc8d3':'#e6b987'}" opacity="${borrowed?.85:.3}"/>`);}
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 800" role="img" aria-label="A trace of this encounter: two intertwined constellations"><rect width="920" height="800" fill="#080a10"/>${paths.join('')}${dots.join('')}<path d="M340 395 Q460 515 580 355" fill="none" stroke="#b46861" opacity=".45"/><text x="460" y="645" text-anchor="middle" fill="#e1d7c7" font-family="Georgia,serif" font-size="25" letter-spacing="7">YUÁNFÈN</text><text x="460" y="680" text-anchor="middle" fill="#b4afa5" font-family="Georgia,serif" font-size="15" font-style="italic">${n?'apart, still altered.':'the space between.'}</text><text x="460" y="749" text-anchor="middle" fill="#898a8e" font-family="monospace" font-size="9" letter-spacing="2">MICHAEL LENG · AFTERIMAGE · ${Math.floor(experience.state.seed*1000).toString().padStart(6,'0')}</text></svg>`;
+}
+function saveTrace(){
+  const blob=new Blob([makeTrace()],{type:'image/svg+xml'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='yuanfen-afterimage.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('enter-sound').addEventListener('click',()=>enterPiece(true));$('enter-quiet').addEventListener('click',()=>enterPiece(false));
+$('sound-toggle').addEventListener('click',async()=>{experience.audio.enabled=!experience.audio.enabled;if(experience.audio.enabled&&!await experience.audio.start()){experience.audio.enabled=false;announce('Audio is unavailable in this browser.');}syncControls();});
+$('pause-toggle').addEventListener('click',()=>{experience.paused=!experience.paused;releaseInput();syncControls();$('pause-label').hidden=!experience.paused;});
+$('motion-toggle').addEventListener('click',()=>{experience.reduced=!experience.reduced;document.body.classList.toggle('gentle',experience.reduced);syncControls();});
+$('fullscreen-toggle').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{announce('Fullscreen is unavailable. The work will continue in this window.');}});
+document.addEventListener('fullscreenchange',()=>{$('fullscreen-toggle').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen';});
+$('about-toggle').addEventListener('click',()=>{releaseInput();experience.modal=true;$('about').showModal();syncSound();});
+$('about-close').addEventListener('click',()=>$('about').close());
+$('about').addEventListener('close',()=>{experience.modal=false;syncSound();$('about-toggle').focus();});
+$('keep-trace').addEventListener('click',saveTrace);$('begin-again').addEventListener('click',()=>location.reload());
+const surface=$('interaction-surface');let lastTap=0,downAt=0,downX=0,downY=0;
+function movePointer(e){experience.pointer.x=e.clientX/innerWidth*2-1;experience.pointer.y=1-e.clientY/innerHeight*2;}
+surface.addEventListener('pointermove',movePointer);
+surface.addEventListener('pointerdown',e=>{if(e.button!==0||!experience.started||experience.paused||experience.state.ended)return;e.preventDefault();surface.focus({preventScroll:true});surface.setPointerCapture(e.pointerId);movePointer(e);experience.held=true;downAt=performance.now();downX=e.clientX;downY=e.clientY;});
+surface.addEventListener('pointerup',e=>{const now=performance.now();if(now-downAt<240&&Math.hypot(e.clientX-downX,e.clientY-downY)<18){if(lastTap&&now-lastTap<340){experience.repel=1;lastTap=0;}else lastTap=now;}releaseInput();});
+surface.addEventListener('pointercancel',releaseInput);surface.addEventListener('lostpointercapture',releaseInput);
+surface.addEventListener('keydown',e=>{
+  if(!experience.started||experience.paused||experience.state.ended)return;
+  if(e.code==='Space'){e.preventDefault();experience.held=true;}
+  if(e.code==='ArrowDown'&&!e.repeat){e.preventDefault();experience.repel=1;}
+  if(['ArrowLeft','ArrowRight','ArrowUp'].includes(e.code)){e.preventDefault();experience.pointer.x=Math.max(-1,Math.min(1,experience.pointer.x+(e.code==='ArrowLeft'?-.05:e.code==='ArrowRight'?.05:0)));if(e.code==='ArrowUp')experience.pointer.y=Math.min(1,experience.pointer.y+.05);}
+});
+surface.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();releaseInput();}});surface.addEventListener('blur',releaseInput);
+window.addEventListener('blur',releaseInput);document.addEventListener('visibilitychange',()=>{releaseInput();syncSound();});
+document.body.classList.toggle('gentle',experience.reduced);syncControls();
+
+// A native Canvas rendering of the same score for devices without WebGL.
+function bootCanvas(){
+  experience.renderer='canvas';document.body.dataset.renderer='canvas';
+  const cvs=document.createElement('canvas');cvs.id='fallback-art';cvs.setAttribute('aria-hidden','true');document.body.prepend(cvs);
+  const ctx=cvs.getContext('2d');if(!ctx){$('webgl-fail').style.display='flex';return;}
+  let w=0,h=0,dpr=1,last=0,phase=0,pull=0,kick=0,distance=.5;
+  const particles=Array.from({length:2200},()=>({a:Math.random()*Math.PI*2,z:Math.random()*2-1,r:.72+Math.random()*.28,ph:Math.random()*Math.PI*2,size:.45+Math.random()*.65}));
+  function resize(){w=innerWidth;h=innerHeight;dpr=Math.min(devicePixelRatio,1.5);cvs.width=w*dpr;cvs.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  window.addEventListener('resize',resize);resize();
+  function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000||.016);last=now;
+    if(document.hidden||experience.paused||experience.modal)return;
+    const active=experience.started&&!experience.state.ended,s=experience.state;
+    if(active){phase+=dt*(experience.reduced?.35:1);pull+=(Number(experience.held)*(1-s.pressure*.42)-pull)*dt*1.1;
+      if(experience.repel){kick=1;experience.repel=0;experience.held=false;}kick=Math.max(0,kick-dt*.15);
+      let target=.50+Math.sin(phase*.055)*.14-pull*.31+kick*.32;
+      if(s.merging)target=.08;
+      if(s.afterglow>0)target=Math.max(target,.48+Math.sin((16-s.afterglow)/16*Math.PI)*.12);
+      distance+=(target-distance)*dt*1.1;
+      advanceExperience(dt,Math.max(0,1-distance/0.78));
+    }
+    ctx.globalCompositeOperation='source-over';ctx.fillStyle='#05070c';ctx.fillRect(0,0,w,h);
+    const rad=Math.min(w*.22,h*.25),cx=w*.5,cy=h*.49;
+    const haze=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(w,h)*.55);haze.addColorStop(0,'#151722');haze.addColorStop(1,'#05070c');ctx.fillStyle=haze;ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle=`rgba(160,91,88,${.16*(1-s.decay*.8)})`;ctx.lineWidth=.65;ctx.beginPath();
+    ctx.moveTo(cx-distance*rad*1.25,cy);ctx.bezierCurveTo(cx-rad*.2,cy+rad*.55,cx+rad*.2,cy+rad*.55,cx+distance*rad*1.25,cy);ctx.stroke();
+    ctx.globalCompositeOperation='lighter';
+    for(let side=0;side<2;side++){
+      const x=cx+(side?1:-1)*distance*rad*1.25+(active?experience.pointer.x*pull*rad*.15:0);
+      const y=cy+Math.sin(phase*.09+side*2)*rad*.12;
+      const glow=ctx.createRadialGradient(x,y,0,x,y,rad*1.25);glow.addColorStop(0,side?'rgba(73,118,140,.025)':'rgba(166,116,76,.028)');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(x-rad*1.3,y-rad*1.3,rad*2.6,rad*2.6);
+      for(let i=0;i<particles.length;i++){
+        const p=particles[i],a=p.a+phase*(side?.023:-.027),lat=Math.sqrt(1-p.z*p.z);
+        const rr=rad*p.r*(1+Math.sin(a*3+phase*.14+side)*.10);
+        const px=Math.cos(a)*lat*rr,py=p.z*rr*.77+Math.sin(a*2+phase*.12+side)*rad*.12;
+        const trace=i<Math.min(560,s.encounters*115),gold=side?trace:!trace;
+        const alive=1-s.decay*(trace?.45:.97);
+        const alpha=(.30+.52*(Math.sin(p.ph+phase*.8)*.5+.5))*(.55+Math.sin(a)*.3)*alive*(trace?1.7:1);
+        ctx.fillStyle=gold?`rgba(235,185,128,${alpha})`:`rgba(139,198,218,${alpha})`;
+        ctx.beginPath();ctx.arc(x+px,y+py,p.size*(trace?1.55:1),0,Math.PI*2);ctx.fill();
+      }
+    }
+    ctx.globalCompositeOperation='source-over';
+  }
+  requestAnimationFrame(frame);
+}
+
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════════
-   缘分 V14.2 — EXHIBITION GRADE (graded)
+   缘分 AFTERIMAGE — an encounter in four movements
    ═══════════════════════════════════════════════════════════════════ */
 
+function bootWebGL(){
+experience.renderer="webgl";document.body.dataset.renderer="webgl";
 // ─── CONFIG ──────────────────────────────────────────────────────
 const CFG={
   // Physics
@@ -101,11 +386,11 @@ const CFG={
   // Repel
   repelForce:6.0, repelDecay:0.5, repelCooldown:0.4,
   // Souls
-  soulRadius:2.2, particleCount:25000, transferBase:200, maxTransfers:3000,
+  soulRadius:2.2, particleCount:18000, transferBase:650, maxTransfers:3000,
   // Convergence thresholds
   convT:[6,18,35,45],
   // Bloom
-  bloomBase:1.0, bloomConvScale:0.4, bloomExciteScale:0.25,
+  bloomBase:0.72, bloomConvScale:0.4, bloomExciteScale:0.25,
   // Decay / impermanence
   decayGracePeriod:180, decayDuration:720, decayExponent:1.5,
   // Audio
@@ -118,39 +403,12 @@ const CFG={
   starCount:600, starParallaxScale:0.012,
 };
 
-// ─── WEBGL CHECK ─────────────────────────────────────────────────
-try{const tc=document.createElement('canvas');
-  if(!tc.getContext('webgl')&&!tc.getContext('experimental-webgl'))throw 0;
-}catch(e){document.getElementById('webgl-fail').style.display='flex';
-  document.getElementById('ceremony').style.display='none';throw new Error('WebGL unavailable')}
-
-// ─── CEREMONY ────────────────────────────────────────────────────
-let cerDone=false,cerReady=false;
-(function(){
-  const c=document.getElementById('ceremony');
-  setTimeout(()=>{document.getElementById('cer-l1').style.color='rgba(255,255,255,0.5)';document.getElementById('cer-l1').textContent='some connections are not chosen'},1500);
-  setTimeout(()=>{document.getElementById('cer-l2').style.color='rgba(255,255,255,0.1)';document.getElementById('cer-l2').textContent='缘 分'},4000);
-  setTimeout(()=>{document.getElementById('cer-l3').style.color='rgba(255,255,255,0.35)';document.getElementById('cer-l3').textContent='they are recognized'},6000);
-  setTimeout(()=>{
-    document.getElementById('cer-go').style.color='rgba(255,255,255,0.15)';
-    document.getElementById('cer-go').textContent='touch anywhere to begin';
-    c.classList.remove('loading');cerReady=true;
-  },8500);
-  function go(){if(cerDone||!cerReady)return;cerDone=true;c.classList.add('farewell');setTimeout(()=>{c.style.display='none'},3500);initAudio()}
-  c.addEventListener('click',go);c.addEventListener('touchstart',go,{passive:true});
-})();
-
 let W=innerWidth,H=innerHeight;
-const PR=Math.min(devicePixelRatio,2);
+const PR=Math.min(devicePixelRatio,1.6);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
 renderer.setSize(W,H);renderer.setPixelRatio(PR);renderer.setClearColor(0x030206,1);renderer.autoClear=false;
 renderer.domElement.setAttribute('aria-hidden','true');
 document.body.prepend(renderer.domElement);
-// Log GL capabilities for debugging
-const _gl=renderer.getContext();
-console.log('GL Point Size Range:',_gl.getParameter(_gl.ALIASED_POINT_SIZE_RANGE));
-console.log('GL Max Texture Size:',_gl.getParameter(_gl.MAX_TEXTURE_SIZE));
-console.log('Pixel Ratio:',PR,'Canvas:',W+'x'+H);
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(50,W/H,0.1,200);
 camera.position.z=16;
@@ -181,7 +439,8 @@ let mergeCount=0; // tracks total merges for escalation
 
 function rebuildSouls(){
   scene.remove(soulA);scene.remove(soulB);
-  const a=createSoul(0.08,new THREE.Vector3(1,0,0));const b=createSoul(0.92,new THREE.Vector3(-1,0,0));
+  soulA.geometry.dispose();soulA.material.dispose();soulB.geometry.dispose();soulB.material.dispose();
+  const a=createSoul(0.08,new THREE.Vector3(1,0,0));const b=createSoul(0.56,new THREE.Vector3(-1,0,0));
   soulA=a;soulB=b;scene.add(soulA);scene.add(soulB);
   TRANSFER_PER_MERGE=Math.round(TRANSFER_BASE*(SC/CFG.particleCount)); // scale with particle count
 }
@@ -235,105 +494,7 @@ function drawStars(t){
   }
 }
 
-// ─── [7] PROXIMITY-RESPONSIVE QUOTES ─────────────────────────────
-const apartQuotes=[
-  "there is no arrival, only orbit",
-  "the distance between almost and everything is one breath",
-  "you can't optimize your way to meaning",
-  "the dream that felt like home is still the navigation point",
-  "conviction isn't confidence — it's the decision to stay",
-  "hold loosely what you love. it comes back different.",
-  "gravity isn't a choice. neither is this.",
-  "the things that last are never the things you planned",
-  "longing is just memory reaching forward",
-  "some distances teach you what closeness couldn't",
-  "the space between is not empty — it's full of almost",
-  "you don't outrun the pattern — you learn to dance inside it",
-  "every orbit is a question asked with the whole body",
-  "what you miss most is what you didn't know to notice",
-  "the push was honest. the return will be too.",
-  "separation is not subtraction",
-  "the further away, the more clearly i see the shape of you",
-];
-const togetherQuotes=[
-  "strangers moving in the same rhythm is the closest thing to telepathy",
-  "some people find each other across rooms. some across lifetimes.",
-  "knowing without knowing — that's yuánfèn",
-  "the goal is not comfort — the goal is resonance",
-  "what you pay attention to becomes your life",
-  "closeness is not a place — it's a frequency",
-  "the body remembers what the mind releases",
-  "recognition doesn't need language",
-  "we were already changed before we touched",
-  "some things only exist in the space between two people",
-  "to be known is to be altered",
-  "the work isn't finished because neither am i",
-  "what remains is always more than what was given",
-  "surrender isn't the opposite of control — it's the other side",
-  "every merge leaves a mark neither of us chose",
-  "the closer we get, the less of me is only mine",
-];
-const quoteLayer=document.getElementById('quote-layer');
-const ACTIVE_QUOTES=4,quoteSlots=[],recentQ=[];
-let currentProx=0; // updated each frame
-
-function pickQuote(){
-  // Bias pool by proximity
-  const pool=currentProx>0.35?togetherQuotes:currentProx<0.15?apartQuotes:
-    (Math.random()>0.5?togetherQuotes:apartQuotes);
-  const avail=pool.filter(q=>!recentQ.includes(q));
-  const src=avail.length>0?avail:pool;
-  const q=src[Math.floor(Math.random()*src.length)];
-  recentQ.push(q);if(recentQ.length>12)recentQ.shift();return q;
-}
-function rndQPos(){const z=Math.random();let x,y;
-  if(z<0.25){x=5+Math.random()*90;y=5+Math.random()*18}
-  else if(z<0.5){x=5+Math.random()*90;y=76+Math.random()*17}
-  else if(z<0.7){x=3+Math.random()*22;y=15+Math.random()*60}
-  else if(z<0.9){x=72+Math.random()*25;y=15+Math.random()*60}
-  else{x=25+Math.random()*50;y=25+Math.random()*50}
-  return{x,y};
-}
-for(let i=0;i<ACTIVE_QUOTES;i++){
-  const el=document.createElement('div');el.className='bg-quote';quoteLayer.appendChild(el);
-  const p=rndQPos(),fs=14+Math.random()*18;
-  quoteSlots.push({el,text:pickQuote(),x:p.x,y:p.y,fontSize:fs,blur:3+Math.random()*5,
-    maxAlpha:0.04+Math.random()*0.06,phase:i*(6.28/ACTIVE_QUOTES),
-    cycleDuration:12+Math.random()*10,rotation:-4+Math.random()*8});
-  el.textContent=quoteSlots[i].text;el.style.left=p.x+'%';el.style.top=p.y+'%';
-  el.style.fontSize=fs+'px';el.style.filter=`blur(${quoteSlots[i].blur}px)`;
-  el.style.transform=`rotate(${quoteSlots[i].rotation}deg)`;
-}
-function updateQuotes(t){
-  // Global decay for impermanence effects
-  const gDecay=soulA.material.uniforms.uDecay.value;
-  for(const s of quoteSlots){
-    const cyc=((t/s.cycleDuration)+s.phase/6.28)%1;
-    let a=0,bl=s.blur;
-    if(cyc<0.15){const p=cyc/0.15;a=s.maxAlpha*p*p;bl=s.blur*(1.5-p*0.5)}
-    else if(cyc<0.5){a=s.maxAlpha;bl=s.blur}
-    else if(cyc<0.7){const p=(cyc-0.5)/0.2;a=s.maxAlpha*(1-p*p);bl=s.blur*(1+p*0.8)}
-    else{a=0;if(cyc>0.85&&cyc<0.87){s.text=pickQuote();
-      // ── IMPERMANENCE: quotes fragment as decay progresses ──
-      if(gDecay>0.15){
-        const chars=s.text.split('');
-        const fragRate=Math.min(0.6,gDecay*0.8);
-        for(let ci=0;ci<chars.length;ci++){
-          if(chars[ci]!==' '&&Math.random()<fragRate*0.4){
-            chars[ci]=Math.random()<0.3?'·':Math.random()<0.5?' ':'⠀';
-          }
-        }
-        s.el.textContent=chars.join('');
-      }else{s.el.textContent=s.text}
-      const p=rndQPos();s.x=p.x;s.y=p.y;s.el.style.left=p.x+'%';s.el.style.top=p.y+'%';
-      s.fontSize=14+Math.random()*18;s.el.style.fontSize=s.fontSize+'px';
-      s.rotation=-4+Math.random()*8;s.blur=3+Math.random()*5;s.maxAlpha=0.04+Math.random()*0.06}}
-    // Decay dims quotes further
-    const decayDim=1-gDecay*0.5;
-    s.el.style.color=`rgba(255,255,255,${a*decayDim})`;s.el.style.filter=`blur(${bl}px)`;
-    s.el.style.transform=`rotate(${s.rotation+Math.sin(t*0.03+s.phase)*1.5}deg)`;
-  }
-}
+let currentProx=0;
 
 // ─── POST-PROCESSING ─────────────────────────────────────────────
 function mkRT(s){return new THREE.WebGLRenderTarget(Math.floor(W*PR*s),Math.floor(H*PR*s),{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat})}
@@ -356,7 +517,7 @@ const compF=`uniform sampler2D tScene,tB1,tB2,tB3;uniform float bStr,time,flash,
   float rand(vec2 co){return fract(sin(dot(co,vec2(12.9898,78.233)))*43758.5453);}
   void main(){vec2 uv=vUv;vec2 cen=uv-0.5;float dist=length(cen);
   // ── CHROMATIC ABERRATION — slightly stronger lateral CA, Zeiss/anamorphic feel ──
-  float ca=dist*dist*0.018;vec2 caO=cen*ca;
+  float ca=dist*dist*0.006;vec2 caO=cen*ca;
   float r=texture2D(tScene,uv+caO).r;float g=texture2D(tScene,uv).g;float b=texture2D(tScene,uv-caO*0.7).b;
   vec3 col=vec3(r,g,b);
   // ── BLOOM ──
@@ -408,7 +569,7 @@ const compF=`uniform sampler2D tScene,tB1,tB2,tB3;uniform float bStr,time,flash,
   col=mix(vec3(0.5),col,1.06);
 
   // ── 6. GRAIN — slightly chunkier, more film-like ──
-  col+=rand(uv*res+time*127.0)*0.04-0.02;
+  col+=rand(uv*res+time*127.0)*0.022-0.011;
   // ── 7. FLASH — UI accent, post-grade ──
   col+=flash*vec3(0.9,0.85,0.8);
   gl_FragColor=vec4(col,1.0);}`;
@@ -423,51 +584,16 @@ function spD(c,t,v,k,dt){const d=2*Math.sqrt(k),a=-k*(c-t)-d*v,nv=v+a*dt;return{
 function spV3(p,t,v,k,dt){const x=spD(p.x,t.x,v.x,k,dt),y=spD(p.y,t.y,v.y,k,dt),z=spD(p.z,t.z,v.z,k,dt);
   p.set(x.pos,y.pos,z.pos);v.set(x.vel,y.vel,z.vel)}
 
-// ─── MOUSE + PULL + REPEL ────────────────────────────────────────
+// Pointer and keyboard input share one accessible surface.
 const mW=new THREE.Vector3();let mDown=false,pullStr=0,wasPulling=false;
-let cursorNear=0; // 0-1 proximity of cursor to nearest soul (before click)
-// Repel system — intentional separation as a meaningful act
-let repelStr=0,repelDir=new THREE.Vector3(),lastRepelTime=-999;
-let dblClickTimer=0,dblClickCount=0;
-function onMP(x,y){mW.set(((x/W)*2-1)*8,(-(y/H)*2+1)*6,0)}
-document.addEventListener('mousemove',e=>onMP(e.clientX,e.clientY));
-document.addEventListener('touchmove',e=>{e.preventDefault();if(e.touches[0])onMP(e.touches[0].clientX,e.touches[0].clientY)},{passive:false});
-document.addEventListener('mousedown',()=>{mDown=true});document.addEventListener('mouseup',()=>{mDown=false});
-document.addEventListener('touchstart',e=>{e.preventDefault();mDown=true;if(e.touches[0])onMP(e.touches[0].clientX,e.touches[0].clientY)},{passive:false});
-document.addEventListener('touchend',e=>{e.preventDefault();mDown=false},{passive:false});
-// ── REPEL: double-click/double-tap or right-click pushes souls apart ──
+let cursorNear=0,repelStr=0,repelDir=new THREE.Vector3(),lastRepelTime=-999;
 function triggerRepel(){
-  const now=performance.now()/1000;
-  if(now-lastRepelTime<CFG.repelCooldown)return;
-  lastRepelTime=now;
-  repelStr=CFG.repelForce;
-  // Direction: away from each other (or away from cursor if pulling)
-  repelDir.subVectors(posB,posA).normalize();
-  // Visual: cool flash + outward ejections
-  burstFlashAlpha=0.06;
-  const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
-  spawnRing(mid,true);
-  for(let i=0;i<4;i++){spawnEj(posA,repelDir.clone().negate());spawnEj(posB,repelDir.clone())}
-  // Audio: descending phrase
-  if(audioReady&&pianoSynth){
-    const descNotes=['G5','E5','C5','Ab4','Eb4'];
-    descNotes.forEach((n,i)=>{setTimeout(()=>{pianoSynth.triggerAttackRelease(n,'16n',undefined,0.12-i*0.015)},i*90)});
-  }
-  // Brief coolness in warmth tint
-  compPass.material.uniforms.warmth.value*=0.3;
-  // Convergence text: separation-themed
-  const sepTexts=['sometimes the letting go is the gift.','distance is its own kind of knowing.','not all departures are losses.','the space returns. it always does.','apart — but altered.'];
-  convTimer=0;convFade=1;convTextEl.textContent=sepTexts[Math.floor(Math.random()*sepTexts.length)];
-  // Decay penalty: intentional separation slightly accelerates impermanence
-  decayAccum+=2.5;
+  if(totalTime-lastRepelTime<.4)return;lastRepelTime=totalTime;
+  repelStr=CFG.repelForce;repelDir.subVectors(posB,posA);
+  if(repelDir.lengthSq()<.001)repelDir.set(1,0,0);repelDir.normalize();
+  velA.addScaledVector(repelDir,-3.5);velB.addScaledVector(repelDir,3.5);
+  experience.held=false;mDown=false;
 }
-document.addEventListener('dblclick',e=>{e.preventDefault();triggerRepel()});
-document.addEventListener('contextmenu',e=>{e.preventDefault();triggerRepel()});
-// Double-tap detection for mobile
-let lastTapTime=0;
-document.addEventListener('touchstart',e=>{
-  const now=Date.now();if(now-lastTapTime<300&&e.touches.length===1){triggerRepel()}lastTapTime=now;
-},{passive:true});
 
 // Cursor awareness: project soul positions to screen, measure distance to mouse
 function updateCursorAwareness(){
@@ -490,7 +616,7 @@ function createSoul(ghostHue,coreBiasDir){
   const bias=coreBiasDir||new THREE.Vector3(0,0,0);
   const geo=new THREE.BufferGeometry();
   const pos=new Float32Array(SC*3),col=new Float32Array(SC*3);
-  const siz=new Float32Array(SC),phase=new Float32Array(SC),depth=new Float32Array(SC);
+  const siz=new Float32Array(SC),phase=new Float32Array(SC),depth=new Float32Array(SC),trace=new Float32Array(SC);
   for(let i=0;i<SC;i++){
     const th=Math.random()*6.28,ph=Math.acos(2*Math.random()-1),sp=Math.sin(ph);
     const zone=Math.random();let rF;
@@ -514,7 +640,7 @@ function createSoul(ghostHue,coreBiasDir){
     else siz[i]=Math.random()*4.0+2.5;
     phase[i]=Math.random()*6.28;depth[i]=rF;
     const mc=new THREE.Color();
-    if(Math.random()<0.20)mc.setHSL(ghostHue+(Math.random()-0.5)*0.06,0.25+Math.random()*0.25,0.75+Math.random()*0.2);
+    if(Math.random()<0.65)mc.setHSL(ghostHue+(Math.random()-0.5)*0.04,0.38+Math.random()*0.20,0.60+Math.random()*0.22);
     else mc.setHSL(0.08+(Math.random()-0.5)*0.04,0.02+Math.random()*0.04,0.8+Math.random()*0.2);
     col[i*3]=mc.r;col[i*3+1]=mc.g;col[i*3+2]=mc.b;
   }
@@ -523,6 +649,7 @@ function createSoul(ghostHue,coreBiasDir){
   geo.setAttribute('size',new THREE.BufferAttribute(siz,1));
   geo.setAttribute('aPhase',new THREE.BufferAttribute(phase,1));
   geo.setAttribute('aDepth',new THREE.BufferAttribute(depth,1));
+  geo.setAttribute('aTrace',new THREE.BufferAttribute(trace,1));
   const mat=new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
     uniforms:{uTime:{value:0},pixelRatio:{value:PR},uBreath:{value:0.3},uExcite:{value:0.03},
@@ -530,7 +657,7 @@ function createSoul(ghostHue,coreBiasDir){
       uFieldStr:{value:0.0},uFieldPhase:{value:0.0},uOtherPos:{value:new THREE.Vector3()},
       uSyncPhase:{value:0.0},uMergeGlow:{value:0.0},uDecay:{value:0.0},uFocalZ:{value:initFocalZ}},
     vertexShader:`
-      attribute vec3 color;attribute float size,aPhase,aDepth;
+      attribute vec3 color;attribute float size,aPhase,aDepth,aTrace;
       uniform float uTime,pixelRatio,uBreath,uExcite,uTurb,uHueShift,uProximity,uColorExchange,uExchangeHue,uBrightness;
       uniform float uFieldStr,uFieldPhase;
       uniform float uSyncPhase,uMergeGlow,uDecay,uFocalZ;
@@ -630,6 +757,7 @@ function createSoul(ghostHue,coreBiasDir){
         vec3 baseCol=mix(color,shiftCol,colorMix*0.4);
         vec3 exchCol=hsl2rgb(uExchangeHue,0.2+uProximity*0.1,0.85);
         vColor=mix(baseCol,exchCol,uColorExchange*(0.3+aDepth*0.4));
+        vColor=mix(vColor,color*1.15,aTrace);
         // Merge glow: whiten and brighten during merge
         vColor=mix(vColor,vec3(1.0,0.98,0.95),uMergeGlow*0.4);
 
@@ -638,13 +766,13 @@ function createSoul(ghostHue,coreBiasDir){
         // ── IMPERMANENCE — particles erode over time ──
         // Outer shell goes first. Core holds longest. Each particle has its own moment.
         // Proximity slows the clock — connection sustains, but can't stop it.
-        float effectiveDecay=uDecay*(1.0-uProximity*0.15);
+        float effectiveDecay=uDecay*(1.0-aTrace*0.42);
         // mortality: outer (high aDepth) erodes early, core (low aDepth) resists
         // aPhase adds per-particle variation so they don't vanish in unison
         float mortality=smoothstep(0.0,1.0,effectiveDecay*(0.4+aDepth)+(aPhase/6.28-0.5)*0.25);
         float alive=1.0-mortality;
 
-        vAlpha=twinkle*depthGlow*(0.75+uMergeGlow*0.35)*uBrightness*alive;
+        vAlpha=(twinkle+aTrace*0.30)*depthGlow*(0.75+uMergeGlow*0.35)*uBrightness*alive;
         vec4 mv=modelViewMatrix*vec4(p,1.0);
 
         // ── DEPTH OF FIELD — photographic focus falloff ──
@@ -658,7 +786,7 @@ function createSoul(ghostHue,coreBiasDir){
 
         vAlpha*=dofAlpha;
         vDofSharp=dofSharp;
-        gl_PointSize=max(0.0,size*(0.6+0.3*twinkle)*(1.0+uProximity*0.1)*uBrightness*alive*dofSize*pixelRatio*(16.0/-mv.z));
+        gl_PointSize=max(0.0,size*(1.0+aTrace*0.28)*(0.6+0.3*twinkle)*(1.0+uProximity*0.1)*uBrightness*alive*dofSize*pixelRatio*(16.0/-mv.z));
         gl_Position=projectionMatrix*mv;
       }`,
     fragmentShader:`
@@ -674,91 +802,29 @@ function createSoul(ghostHue,coreBiasDir){
   });
   return new THREE.Points(geo,mat);
 }
-let soulA=createSoul(0.08,new THREE.Vector3(1,0,0)),soulB=createSoul(0.92,new THREE.Vector3(-1,0,0));
+let soulA=createSoul(0.08,new THREE.Vector3(1,0,0)),soulB=createSoul(0.56,new THREE.Vector3(-1,0,0));
 scene.add(soulA);scene.add(soulB);
-// Shader compile check
-[soulA,soulB].forEach((s,i)=>{
-  renderer.compile(scene,camera);
-  const gl=renderer.getContext();
-  const prog=renderer.properties.get(s.material).currentProgram;
-  if(prog){const p=prog.program;
-    if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
-      console.error('Soul '+i+' shader LINK error:',gl.getProgramInfoLog(p));
-      console.error('VS:',gl.getShaderInfoLog(gl.getAttachedShaders(p)[0]));
-      console.error('FS:',gl.getShaderInfoLog(gl.getAttachedShaders(p)[1]));
-    }else{console.log('Soul '+i+' shader compiled OK')}
-  }
-});
+soulA.position.copy(posA);soulB.position.copy(posB);
 function eU(m,n,t,dt,s){m.uniforms[n].value+=(t-m.uniforms[n].value)*dt*(s||1)}
 
-// ─── PERMANENT PARTICLE TRANSFER ─────────────────────────────────
-// After each merge, particles physically move between souls.
-// Source particles shrink to nothing. Target particles appear with source color.
-// This is irreversible. The souls carry each other forward.
-
-function transferParticles(fromSoul,toSoul,fromPos,toPos,count){
-  const fGeo=fromSoul.geometry,tGeo=toSoul.geometry;
-  const fPos=fGeo.attributes.position.array,fCol=fGeo.attributes.color.array;
-  const fSiz=fGeo.attributes.size.array,fDep=fGeo.attributes.aDepth.array;
-  const tPos=tGeo.attributes.position.array,tCol=tGeo.attributes.color.array;
-  const tSiz=tGeo.attributes.size.array,tPh=tGeo.attributes.aPhase.array;
-  const tDep=tGeo.attributes.aDepth.array;
-
-  // Find outer-shell particles from source (most visible, most meaningful to lose)
-  const srcCandidates=[];
-  for(let i=0;i<SC;i++){
-    if(fDep[i]>0.80&&fSiz[i]>0.5) srcCandidates.push(i); // outer shell, not already transferred away
+// Reciprocal exchange preserves particle count and keeps earlier traces intact.
+function exchangeParticles(){
+  const aa=soulA.geometry.attributes,bb=soulB.geometry.attributes;
+  const pool=a=>{const out=[];for(let i=0;i<SC;i++)if(a.aDepth.array[i]>.80&&!a.aTrace.array[i])out.push(i);
+    for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;};
+  const a=pool(aa),b=pool(bb),count=Math.min(Math.round(TRANSFER_PER_MERGE*(1+Math.min(mergeCount,3)*.15)),a.length,b.length,Math.max(0,MAX_TRANSFERS-transfersFromA));
+  for(let n=0;n<count;n++){
+    const ai=a[n],bi=b[n];
+    for(let c=0;c<3;c++){
+      const tmp=aa.color.array[ai*3+c];aa.color.array[ai*3+c]=bb.color.array[bi*3+c];bb.color.array[bi*3+c]=tmp;
+    }
+    const ph=aa.aPhase.array[ai];aa.aPhase.array[ai]=bb.aPhase.array[bi];bb.aPhase.array[bi]=ph;
+    aa.aTrace.array[ai]=bb.aTrace.array[bi]=1;
+    aa.size.array[ai]=bb.size.array[bi]=2.7;
   }
-  // Find outer-shell particles in target to overwrite (they become the new arrivals)
-  const dstCandidates=[];
-  for(let i=0;i<SC;i++){
-    if(tDep[i]>0.80&&tSiz[i]>0.5) dstCandidates.push(i);
-  }
-
-  // Shuffle both
-  for(let i=srcCandidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[srcCandidates[i],srcCandidates[j]]=[srcCandidates[j],srcCandidates[i]]}
-  for(let i=dstCandidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[dstCandidates[i],dstCandidates[j]]=[dstCandidates[j],dstCandidates[i]]}
-
-  const actual=Math.min(count,srcCandidates.length,dstCandidates.length);
-  if(actual===0)return 0;
-
-  for(let n=0;n<actual;n++){
-    const si=srcCandidates[n]; // source particle index
-    const di=dstCandidates[n]; // destination particle index to overwrite
-
-    // Get source particle's world position
-    const wx=fPos[si*3]+fromPos.x;
-    const wy=fPos[si*3+1]+fromPos.y;
-    const wz=fPos[si*3+2]+fromPos.z;
-
-    // Write into target's local space
-    tPos[di*3]=wx-toPos.x;
-    tPos[di*3+1]=wy-toPos.y;
-    tPos[di*3+2]=wz-toPos.z;
-
-    // Target gets source's color (the carried trace)
-    tCol[di*3]=fCol[si*3];
-    tCol[di*3+1]=fCol[si*3+1];
-    tCol[di*3+2]=fCol[si*3+2];
-
-    // Slightly brighter and larger than average — these are scars, they should be visible
-    tSiz[di]=2.5+Math.random()*2.5;
-    tPh[di]=Math.random()*6.28;
-    tDep[di]=0.92+Math.random()*0.08; // outer shell position
-
-    // Source particle: shrink to nothing (it's gone, given to the other)
-    fSiz[si]=0;
-  }
-
-  // Mark all buffers dirty
-  fGeo.attributes.size.needsUpdate=true;
-  tGeo.attributes.position.needsUpdate=true;
-  tGeo.attributes.color.needsUpdate=true;
-  tGeo.attributes.size.needsUpdate=true;
-  tGeo.attributes.aPhase.needsUpdate=true;
-  tGeo.attributes.aDepth.needsUpdate=true;
-
-  return actual;
+  for(const attrs of [aa,bb])for(const key of ['color','aPhase','aTrace','size'])attrs[key].needsUpdate=true;
+  transfersFromA+=count;transfersFromB+=count;
+  return count;
 }
 
 // ─── RED THREAD RIBBON ───────────────────────────────────────────
@@ -874,250 +940,34 @@ function updateEj(dt){for(let i=0;i<EJ_COUNT;i++){const p=ejP[i];
     ejAlp[i*EJ_TAIL+j]=fade*Math.pow(1-j/EJ_TAIL,2.5)*0.7;ejSiz[i*EJ_TAIL+j]=p.baseSize*(1-j/EJ_TAIL*0.7)*Math.max(0.2,1-prog*0.6)}}
   ejGeo.attributes.position.needsUpdate=true;ejGeo.attributes.alpha.needsUpdate=true;ejGeo.attributes.size.needsUpdate=true}
 
-// ─── [4] CONVERGENCE — 4 stages + MYTHIC EVENTS ─────────────────
+// One score drives both visual renderers and the musical memory.
 let convStage=0,cumProx=0,burstFlashAlpha=0,lastProx=0;
-let decayAccum=0;
-let convFade=0,convTimer=0;
-let mergeTimer=0,mergeActive=false,exchangeAmount=0;
-// Mythic event state
-let soulMerging=false,mergeProgress=0; // A: soul merge
-let exhausting=false,exhaleTimer=0;     // C: memory exhale
-let lastMythicTime=-999; // cooldown tracker
-let stage3FirstHit=false;
-const convTextEl=document.getElementById('conv-text');
-const CONV_T=CFG.convT; // thresholds
-const CONV_Q=[
-  ["something here is not accidental","the distance is learning your name","closer now — can you feel it pulling?"],
-  ["this is the frequency just before recognition","two orbits, one center of gravity","almost. almost. almost.","every near-miss was practice for this"],
-  ["there you are.","缘分 — it was always this.","recognized. finally."],
-  ["changed by the encounter. carrying something of the other forward.","what remains is not what you expected. it is what you needed."],
-];
-
-// ── A: SOUL MERGE ──
-function triggerSoulMerge(t){
-  if(soulMerging||t-lastMythicTime<CFG.mythicCooldown)return;
-  soulMerging=true;mergeProgress=0;lastMythicTime=t;
-  mergeCount++;
-  // Convergence text
-  convTimer=0;convFade=1;
-  // ── MERGE DIFFERENTIATION: text and audio escalate with merge count ──
-  const mergeTexts=mergeCount<=1?
-    ['two becoming one. for a moment.','synchronized.','the same breath.']:
-    mergeCount<=3?
-    ['deeper now.','the boundary thins.','closer than last time.','this is not the first time.']:
-    ['there is no boundary.','一体 — one body.','how many times until we stop counting?','we were never separate.'];
-  convTextEl.textContent=mergeTexts[Math.floor(Math.random()*mergeTexts.length)];
-  // Audio: chord complexity and density escalates with merge count
-  if(audioReady&&pianoSynth){
-    const mergeChords=[
-      ['C4','E4','G4','B4','E5'],                           // 1st merge: simple maj7
-      ['C4','E4','G4','B4','D5','E5'],                      // 2nd: add9
-      ['C3','G3','C4','E4','G4','B4','D5','E5'],            // 3rd: full voicing
-      ['C3','E3','G3','C4','E4','G4','B4','D5','E5','G5'],  // 4th+: cathedral
-    ];
-    const chordIdx=Math.min(mergeCount-1,mergeChords.length-1);
-    pianoSynth.triggerAttackRelease(mergeChords[chordIdx],'2n',undefined,0.3+mergeCount*0.04);
-    if(padSynth){
-      const padChord=mergeCount>=3?['C3','G3','C4','E4','G4']:['C3','G3','C4','E4'];
-      padSynth.triggerAttackRelease(padChord,'1n',undefined,0.15+mergeCount*0.03);
-    }
-  }
-}
-
-function updateSoulMerge(dt){
-  if(!soulMerging){
-    // Decay sync and glow when not merging
-    eU(soulA.material,'uSyncPhase',0,dt,2);eU(soulB.material,'uSyncPhase',0,dt,2);
-    eU(soulA.material,'uMergeGlow',0,dt,2);eU(soulB.material,'uMergeGlow',0,dt,2);
-    // Ribbon restores
-    rMat.uniforms.uOpacity.value+=(1-rMat.uniforms.uOpacity.value)*dt*2;
-    return;
-  }
-  mergeProgress+=dt;
-  const dur=6; // total merge duration
-  let syncAmt=0,glowAmt=0,ribbonFade=1;
-
-  if(mergeProgress<1.5){
-    // Phase 1: sync builds, glow rises, ribbon fades
-    const p=mergeProgress/1.5;
-    syncAmt=p*p; // ease in
-    glowAmt=p*0.35;
-    ribbonFade=1-p;
-  }else if(mergeProgress<4.5){
-    // Phase 2: full sync, souls overlapping, ribbon gone
-    syncAmt=1;
-    glowAmt=0.35+Math.sin(mergeProgress*3)*0.1; // pulse
-    ribbonFade=0;
-  }else if(mergeProgress<dur){
-    // Phase 3: desync, ribbon returns, glow fades
-    const p=(mergeProgress-4.5)/(dur-4.5);
-    syncAmt=1-p*p;
-    glowAmt=0.35*(1-p);
-    ribbonFade=p;
-  }else{
-    soulMerging=false;syncAmt=0;glowAmt=0;ribbonFade=1;
-
-    // ── PERMANENT PARTICLE TRANSFER — scales with merge count ──
-    // More particles exchanged each successive merge
-    const mergeScale=1+Math.min(mergeCount-1,4)*0.3; // up to 2.2x at merge 5+
-    const transferCount=Math.round(TRANSFER_PER_MERGE*mergeScale);
-    if(transfersFromA<MAX_TRANSFERS){
-      const n=transferParticles(soulA,soulB,posA,posB,transferCount);
-      transfersFromA+=n;
-    }
-    if(transfersFromB<MAX_TRANSFERS){
-      const n=transferParticles(soulB,soulA,posB,posA,transferCount);
-      transfersFromB+=n;
-    }
-
-    // Ejection burst on separation — escalates
-    const ejCount=4+mergeCount*2;
-    for(let i=0;i<ejCount;i++){spawnEj(posA,null);spawnEj(posB,null)}
-    const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
-    spawnRing(mid,true);
-    if(mergeCount>=3){spawnRing(posA,true);spawnRing(posB,true)} // extra rings at 3+
-    burstFlashAlpha=0.08+mergeCount*0.02;
-    // Transfer visual cue: brightness scales with merge count
-    soulA.material.uniforms.uMergeGlow.value=0.5+mergeCount*0.08;
-    soulB.material.uniforms.uMergeGlow.value=0.5+mergeCount*0.08;
-    soulA.material.uniforms.uBrightness.value=1.6+mergeCount*0.1;
-    soulB.material.uniforms.uBrightness.value=1.6+mergeCount*0.1;
-
-    // Convergence text acknowledges the exchange
-    convTimer=0;convFade=1;
-    const totalExchanged=transfersFromA+transfersFromB;
-    if(totalExchanged<=600){
-      convTextEl.textContent=['something was left behind.','not the same as before.','carrying each other now.'][Math.floor(Math.random()*3)];
-    }else if(totalExchanged<=1800){
-      convTextEl.textContent=['more of you in me now.','the boundary dissolves.','whose light is this?'][Math.floor(Math.random()*3)];
-    }else{
-      convTextEl.textContent=['we are mostly each other.','where do you end and i begin?','原来如此 — so it was always this.'][Math.floor(Math.random()*3)];
-    }
-  }
-  // Apply
-  eU(soulA.material,'uSyncPhase',syncAmt,dt,3);
-  eU(soulB.material,'uSyncPhase',syncAmt,dt,3);
-  eU(soulA.material,'uMergeGlow',glowAmt,dt,3);
-  eU(soulB.material,'uMergeGlow',glowAmt,dt,3);
-  rMat.uniforms.uOpacity.value+=(ribbonFade-rMat.uniforms.uOpacity.value)*dt*4;
-}
-
-// ── C: MEMORY EXHALE ──
-function triggerMemoryExhale(t){
-  if(exhausting||t-lastMythicTime<CFG.mythicCooldown)return;
-  exhausting=true;exhaleTimer=0;lastMythicTime=t;
-  // Spawn 15-18 memories simultaneously from both souls
-  const count=10+Math.floor(Math.random()*4);
-  for(let i=0;i<count;i++){
-    const fromA=Math.random()>0.5;
-    spawnM(fromA?posA:posB,fromA?posB:posA,fromA);
-  }
-  // Burst flash
-  burstFlashAlpha=0.06;
-  // Audio: rapid arpeggiated notes
-  if(audioReady&&pianoSynth){
-    const notes=['C4','E4','G4','B4','C5','E5','G5'];
-    notes.forEach((n,i)=>{
-      setTimeout(()=>{pianoSynth.triggerAttackRelease(n,'8n',undefined,0.15+i*0.03)},i*120);
-    });
-  }
-  // Text
-  convTimer=0;convFade=1;
-  convTextEl.textContent=['everything, all at once.','a lifetime in a breath.','the space between them, full.'][Math.floor(Math.random()*3)];
-}
-
-function updateMemoryExhale(dt){
-  if(!exhausting)return;
-  exhaleTimer+=dt;
-  if(exhaleTimer>12){exhausting=false} // returns to calm after 12s
-}
-
+let soulMerging=false,mergeProgress=0,exhausting=false;
 function updateConv(prox,dt,t){
-  if(prox>0.3) cumProx+=dt*(0.5+prox*1.5);else cumProx=Math.max(0,cumProx-dt*0.05);
-  const prev=convStage;
-  if(cumProx>=CONV_T[3]) convStage=4;
-  else if(cumProx>=CONV_T[2]) convStage=3;
-  else if(cumProx>=CONV_T[1]) convStage=2;
-  else if(cumProx>=CONV_T[0]) convStage=1;
-
-  if(convStage>prev){
-    convTimer=0;convFade=1;
-    const pool=CONV_Q[convStage-1];
-    convTextEl.textContent=pool[Math.floor(Math.random()*pool.length)];
-    if(convStage>=2){const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
-      for(let i=0;i<convStage*2;i++){spawnEj(posA,null);spawnEj(posB,null)}
-      for(let i=0;i<convStage;i++)spawnRing(mid,true);
-      burstFlashAlpha=0.05+convStage*0.03;
-      trigConvChord(convStage);
-    }
-    // Stage 3 first hit → memory exhale
-    if(convStage===3&&!stage3FirstHit){stage3FirstHit=true;triggerMemoryExhale(t)}
-    // Stage 4 → soul merge
-    if(convStage===4){mergeActive=true;mergeTimer=0;triggerSoulMerge(t)}
+  const events=advanceExperience(dt,prox),s=experience.state;
+  convStage=Math.min(4,Math.floor(s.contact/5)+s.encounters);cumProx=s.contact;
+  mergeCount=s.encounters;soulMerging=s.merging;mergeProgress=s.mergeTime;
+  const wave=s.merging?Math.sin(Math.PI*Math.min(1,s.mergeTime/6)):0;
+  for(const soul of [soulA,soulB]){
+    eU(soul.material,'uSyncPhase',wave,dt,2);
+    eU(soul.material,'uMergeGlow',wave*.28,dt,2);
+    soul.material.uniforms.uColorExchange.value=0;
   }
-  // Stage 4: color exchange
-  if(mergeActive){mergeTimer+=dt;
-    if(mergeTimer<4) exchangeAmount=Math.min(1,exchangeAmount+dt*0.5);
-    else{mergeActive=false}
+  rMat.uniforms.uOpacity.value=1-wave*.8;
+  if(events.includes('exchange')){
+    exchangeParticles();
+    const mid=new THREE.Vector3().lerpVectors(posA,posB,.5);spawnRing(mid,false);
+    for(let i=0;i<3;i++){spawnM(posA,posB,true);spawnM(posB,posA,false);}
   }
-  const exchTarget=mergeActive?exchangeAmount:Math.max(0.25,exchangeAmount-dt*0.02);
-  exchangeAmount=exchTarget;
-  soulA.material.uniforms.uColorExchange.value=exchangeAmount;
-  soulB.material.uniforms.uColorExchange.value=exchangeAmount;
-  const hueA=((t*0.012)%1.0+0.08)%1.0,hueB=((t*0.012+0.5)%1.0+0.92)%1.0;
-  soulA.material.uniforms.uExchangeHue.value=hueB;
-  soulB.material.uniforms.uExchangeHue.value=hueA;
-
-  // Rare mythic events: random trigger every 3-5 minutes
-  if(t-lastMythicTime>CFG.mythicAutoMin+Math.random()*CFG.mythicAutoRange&&prox>0.3){
-    // Pick one at random
-    if(Math.random()>0.5)triggerSoulMerge(t);else triggerMemoryExhale(t);
-  }
-
-  convTimer+=dt;if(convTimer>8)convFade=Math.max(0,convFade-dt*0.3);
-  const alpha=convFade*0.22;
-  convTextEl.style.color=`rgba(255,255,255,${alpha})`;
-  convTextEl.style.filter=`blur(${Math.max(0,6-alpha*28)}px)`;
-
-  // Update mythic systems
-  updateSoulMerge(dt);
-  updateMemoryExhale(dt);
-
-  // During merge: pull souls toward each other (acts on positions directly)
-  if(soulMerging&&mergeProgress>0.5&&mergeProgress<5){
-    const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5);
-    const mergePull=mergeProgress<1.5?((mergeProgress-0.5)/1.0)*0.6:
-                    mergeProgress>4.5?((5-mergeProgress)/0.5)*0.6:0.6;
-    posA.lerp(mid,mergePull*dt*3);
-    posB.lerp(mid,mergePull*dt*3);
+  if(s.merging){
+    const mid=new THREE.Vector3().lerpVectors(posA,posB,.5);
+    posA.lerp(mid,wave*dt*1.2);posB.lerp(mid,wave*dt*1.2);
     soulA.position.copy(posA);soulB.position.copy(posB);
   }
 }
 
 // ─── [2] MEMORIES — blurred italic text, no UI boxes ─────────────
-const memTexts=[
-  "sunrise over the mountains","a city from a balloon","ruins in the fog",
-  "golden hour, anywhere","the next journey, already forming","a lake with no roads",
-  "the weight of a new beginning","rolling with strangers",
-  "every day further from our prime","the body doesn't lie",
-  "expressions that build themselves","teaching what you love",
-  "one more iteration, then sleep","designing systems that compound",
-  "the camera sees everything","anyplace we love",
-  "walking home through the snow","the last train at 2am",
-  "a rooftop in the cold","losing yourself in the music",
-  "the bass before the drop","structured chaos on the dancefloor",
-  "strangers moving in the same rhythm","the people who stay",
-  "the flywheel keeps turning","dividends while you sleep",
-  "building the web, month by month","control and surrender",
-  "am i doing this right?","knowing without knowing",
-  "the dream that felt like home","motion as language",
-  "the work isn't finished","every system outlives its maker",
-  "a life designed, not drifted","what i could become",
-  "orbit, not arrival","almost, then everything",
-  // impermanence-aware
-  "this too","even the beautiful things erode","the fade is part of the form",
-  "nothing was wasted","what dissolves was still real",
-];
+const memTexts=[''];
 const MC=35,mGeo=new THREE.BufferGeometry();
 const mPos=new Float32Array(MC*3),mAlp=new Float32Array(MC),mSiz=new Float32Array(MC),mCol=new Float32Array(MC*3);
 const mVel=[],mSt=[];
@@ -1153,18 +1003,18 @@ function spawnM(src,dst,fromA){for(let i=0;i<MC;i++){if(mSt[i].active)continue;c
   mVel[i].copy(dir).multiplyScalar(0.08+Math.random()*0.1);
   mVel[i].x+=(Math.random()-0.5)*0.06;mVel[i].y+=(Math.random()-0.5)*0.06;
   // Attach text element
-  if(Math.random()<0.35){const slot=getMemTextEl();if(slot){slot.active=true;slot.memIdx=i;slot.alpha=0;slot.el.textContent=s.text;s.textEl=slot}else s.textEl=null}else s.textEl=null;
+  if(false){const slot=getMemTextEl();if(slot){slot.active=true;slot.memIdx=i;slot.alpha=0;slot.el.textContent=s.text;s.textEl=slot}else s.textEl=null}else s.textEl=null;
   memSpawned=true;return}}
 
 function updateMems(t,dt){
-  memSpawned=false;const dist=posA.distanceTo(posB),prox=Math.max(0,1-dist/4),rate=2.0-prox*0.8;
+  memSpawned=false;const dist=posA.distanceTo(posB),prox=Math.max(0,1-dist/4),rate=6.0-prox*2.0;
   mSpT+=dt;if(mSpT>rate){mSpT=0;const fa=Math.random()>0.5;spawnM(fa?posA:posB,fa?posB:posA,fa)}
   for(let i=0;i<MC;i++){const s=mSt[i];if(!s.active)continue;s.lifetime+=dt;const prog=s.lifetime/s.maxLife;
     if(prog>=1){s.active=false;mAlp[i]=0;mSiz[i]=0;if(s.textEl){s.textEl.active=false;s.textEl.el.style.color='rgba(255,255,255,0)';s.textEl=null}continue}
     const tgt=s.fromA?posB:posA;const dx=tgt.x-mPos[i*3],dy=tgt.y-mPos[i*3+1],dz=tgt.z-mPos[i*3+2];
     const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
     // [3] Check arrival — spawn earned ring
-    if(d<SOUL_RADIUS*1.2&&!s.arrived){s.arrived=true;spawnRing(tgt,false)}
+    if(d<SOUL_RADIUS*1.2&&!s.arrived){s.arrived=true}
     if(d>0.1){const sf=prog<0.3?0.015:prog>0.7?0.1:0.04;
       mVel[i].x+=(dx/d*0.2-mVel[i].x)*dt*sf*2;mVel[i].y+=(dy/d*0.2-mVel[i].y)*dt*sf*2;mVel[i].z+=(dz/d*0.12-mVel[i].z)*dt*sf*2}
     mVel[i].x+=Math.sin(t*0.4+i*0.7)*dt*0.005;mVel[i].y+=Math.cos(t*0.35+i*0.9)*dt*0.005;
@@ -1189,232 +1039,15 @@ function updateMems(t,dt){
   }
 }
 
-// ─── TYPOGRAPHY (CJK anchors only) ───────────────────────────────
-const typoLayer=document.getElementById('typo-layer');
-const typoAnchors=[{char:'縁',x:'12%',y:'18%',size:120,blur:6,maxA:0.08,rot:-8},
-  {char:'運命',x:'78%',y:'72%',size:85,blur:4,maxA:0.07,rot:5},
-  {char:'絆',x:'8%',y:'78%',size:95,blur:5,maxA:0.065,rot:-3}];
-const typoEls=[];
-for(const a of typoAnchors){const el=document.createElement('div');el.className='typo-anchor';
-  el.textContent=a.char;el.style.fontSize=a.size+'px';el.style.filter=`blur(${a.blur}px)`;
-  el.style.left=a.x;el.style.top=a.y;typoLayer.appendChild(el);typoEls.push({el,...a,curA:0})}
-function updateTypo(t){
-  const gDecay=soulA.material.uniforms.uDecay.value;
-  const proxBoost=1+currentProx*0.5+convStage*0.15; // glow when souls are close
-  const decayFade=1-gDecay*0.6;
-  for(let i=0;i<typoEls.length;i++){const a=typoEls[i];
-  const pulse=0.5+0.5*Math.sin(t*0.06+i*2.5);a.curA+=(a.maxA*pulse*proxBoost*decayFade-a.curA)*0.01;
-  const scale=1+currentProx*0.02*Math.sin(t*0.1+i); // subtle proximity pulse
-  a.el.style.opacity=String(a.curA);
-  a.el.style.transform=`rotate(${a.rot+Math.sin(t*0.03+i)*2}deg) scale(${scale})`;
-  // Decay: blur increases as things fade
-  a.el.style.filter=`blur(${a.blur+gDecay*3}px)`;
-}}
-
-// ─── [1] COMPOSITIONAL AUDIO — FM synthesis, dual reverb, breathing ──
-let audioReady=false,pianoSynth,bassSynth,padSynth,hallRev,roomRev,master,ambientGain;
-let subDrones=[]; // for detuning LFO
-const minorNotes=['C4','Eb4','G4','Ab4','Bb4','C5','Eb5'];
-const majorNotes=['C4','D4','E4','G4','A4','B4','C5','E5','G5'];
-const liminalNotes=['C4','D4','Eb4','G4','Ab4','B4','C5','D5']; // neither major nor minor — transitional
-const bassNotesMinor=['C2','Eb2','Ab2','G2','Bb2','C3'];
-const bassNotesMajor=['C2','D2','F2','G2','A2','C3'];
-const bassNotesLiminal=['C2','Eb2','F2','G2','Bb2'];
-let lastNoteTime=0,lastBassTime=0,lastPadChange=0;
-// Breathing dynamics — notes in phrases, silence between
-let phraseNotes=0,phraseMax=3,phraseSilenceUntil=0;
-let lastPhraseNote='C4'; // voice-leading anchor
-
-async function initAudio(){try{await Tone.start();
-  // ── DUAL REVERB: long hall + short room (parallel) ──
-  hallRev=new Tone.Reverb({decay:22,wet:0.72,preDelay:0.04}).toDestination();
-  roomRev=new Tone.Reverb({decay:3.5,wet:0.45,preDelay:0.01}).toDestination();
-  const delay=new Tone.FeedbackDelay({delayTime:'8n.',feedback:0.18,wet:0.1}).connect(hallRev);
-  // Master splits to both reverbs
-  master=new Tone.Gain(CFG.masterGain);
-  master.connect(hallRev);master.connect(roomRev);
-
-  // ── AMBIENT LAYER: filtered brown noise + sub drone ──
-  ambientGain=new Tone.Gain(0.1).connect(master);
-  const noise=new Tone.Noise('brown').start();
-  const nFilt=new Tone.AutoFilter({frequency:0.02,min:30,max:200,depth:0.85,octaves:3}).connect(ambientGain).start();
-  noise.connect(nFilt);
-  // Sub drone: detuned pair + fifth for warmth — stored for LFO drift
-  const droneA=new Tone.Oscillator({frequency:55,type:'sine',volume:-24}).connect(master).start();
-  const droneB=new Tone.Oscillator({frequency:55.15,type:'sine',volume:-28}).connect(master).start();
-  const droneC=new Tone.Oscillator({frequency:82.4,type:'sine',volume:-30}).connect(master).start();
-  subDrones=[droneA,droneB,droneC];
-
-  // ── PIANO: FM synthesis — bell-like warmth with natural harmonic decay ──
-  // Main FM voice: harmonicity 3.01 gives metallic-warm piano character
-  pianoSynth=new Tone.PolySynth(Tone.FMSynth,{
-    harmonicity:3.01, modulationIndex:2.2,
-    oscillator:{type:'sine'}, modulation:{type:'sine'},
-    envelope:{attack:0.008,decay:8,sustain:0,release:10},
-    modulationEnvelope:{attack:0.002,decay:0.8,sustain:0.12,release:4},
-    volume:-18}).connect(delay);
-  // Harmonic layer: higher harmonicity for shimmer, very quiet
-  const pianoHarm=new Tone.PolySynth(Tone.FMSynth,{
-    harmonicity:5.01, modulationIndex:1.2,
-    oscillator:{type:'sine'}, modulation:{type:'sine'},
-    envelope:{attack:0.004,decay:4,sustain:0,release:6},
-    modulationEnvelope:{attack:0.001,decay:0.4,sustain:0.08,release:3},
-    volume:-28}).connect(hallRev);
-  // Attack texture: filtered noise burst
-  const attackNoise=new Tone.NoiseSynth({noise:{type:'white'},
-    envelope:{attack:0.001,decay:0.06,sustain:0,release:0.04},
-    volume:-38}).connect(new Tone.Filter({frequency:2200,type:'bandpass',Q:1.8}).connect(roomRev));
-  // Ghost layer: very quiet sine one octave below for body
-  const pianoGhost=new Tone.PolySynth(Tone.Synth,{oscillator:{type:'sine'},
-    envelope:{attack:0.05,decay:10,sustain:0,release:12},volume:-34}).connect(hallRev);
-
-  // Wrap piano to trigger all layers
-  const _origP=pianoSynth.triggerAttackRelease.bind(pianoSynth);
-  pianoSynth.triggerAttackRelease=function(notes,dur,time,vel){
-    _origP(notes,dur,time,vel);
-    try{
-      const n0=typeof notes==='string'?notes:Array.isArray(notes)?notes[0]:null;
-      if(n0){
-        pianoHarm.triggerAttackRelease(n0,'8n',time,(vel||0.3)*0.25);
-        // Ghost octave below
-        const ghost=n0.replace(/(\d)/,m=>Math.max(2,parseInt(m)-1));
-        pianoGhost.triggerAttackRelease(ghost,'4n',time,(vel||0.3)*0.15);
-      }
-      attackNoise.triggerAttackRelease('32n',time,(vel||0.3)*0.4);
-    }catch(e){}
-  };
-
-  // ── BASS: FM with low harmonicity for warm sub character ──
-  bassSynth=new Tone.FMSynth({
-    harmonicity:1.01, modulationIndex:0.7,
-    oscillator:{type:'sine'}, modulation:{type:'triangle'},
-    envelope:{attack:0.5,decay:5,sustain:0.06,release:6},
-    modulationEnvelope:{attack:0.3,decay:2,sustain:0.08,release:4},
-    volume:-22}).connect(master);
-
-  // ── PAD: FM with chorus detuning for choral wash ──
-  padSynth=new Tone.PolySynth(Tone.FMSynth,{
-    harmonicity:2.01, modulationIndex:0.6,
-    oscillator:{type:'sine'}, modulation:{type:'sine'},
-    envelope:{attack:4,decay:10,sustain:0.3,release:12},
-    modulationEnvelope:{attack:2,decay:6,sustain:0.15,release:8},
-    volume:-24}).connect(hallRev);
-  // Chorus layer: slightly detuned for width
-  const padChorus=new Tone.PolySynth(Tone.FMSynth,{
-    harmonicity:2.01, modulationIndex:0.5,
-    oscillator:{type:'sine',detune:7}, modulation:{type:'sine',detune:-5},
-    envelope:{attack:4.5,decay:10,sustain:0.25,release:12},
-    modulationEnvelope:{attack:2.5,decay:6,sustain:0.12,release:8},
-    volume:-28}).connect(hallRev);
-  const _origPad=padSynth.triggerAttackRelease.bind(padSynth);
-  padSynth.triggerAttackRelease=function(notes,dur,time,vel){
-    _origPad(notes,dur,time,vel);try{padChorus.triggerAttackRelease(notes,dur,time,(vel||0.2)*0.55)}catch(e){}
-  };
-
-  audioReady=true}catch(e){console.log('Audio init failed',e)}}
-
-// Voice-leading: pick nearest note to last played for melodic continuity
-function voiceLead(notes,anchor){
-  if(!anchor)return notes[Math.floor(Math.random()*notes.length)];
-  const aNum=Tone.Frequency(anchor).toMidi();
-  let best=notes[0],bestDist=999;
-  for(const n of notes){const d=Math.abs(Tone.Frequency(n).toMidi()-aNum);if(d<bestDist&&d>0){bestDist=d;best=n}}
-  return best;
-}
-
-function updateAudio(t,prox){if(!audioReady)return;
-  // ── DRONE DETUNING LFO — slow pitch drift for organic warmth ──
-  if(subDrones.length>=3){
-    const drift=Math.sin(t*0.017)*0.5+Math.sin(t*0.011)*0.3; // ~60s cycle, complex
-    subDrones[0].frequency.value=55+drift*0.2;
-    subDrones[1].frequency.value=55.15+drift*0.35+Math.sin(t*0.023)*0.15;
-    subDrones[2].frequency.value=82.4+drift*0.25;
-  }
-  // ── PIANO TIMBRE EVOLUTION — modulation index rises with convergence ──
-  if(pianoSynth&&pianoSynth.voices){
-    const modTarget=2.2+convStage*0.5+mergeCount*0.15; // gets richer over time
-    pianoSynth.voices.forEach(v=>{try{v.modulationIndex.value+=(modTarget-v.modulationIndex.value)*0.01}catch(e){}});
-  }
-  // Ambient warmth modulates with proximity
-  if(ambientGain)ambientGain.gain.rampTo(0.08+prox*0.08+convStage*0.02,1);
-  // Note selection: minor → liminal → major with proximity
-  const notes=prox>0.5?majorNotes:prox>0.3?liminalNotes:
-    prox>0.15?[...minorNotes.slice(0,4),...liminalNotes.slice(4)]:minorNotes;
-
-  // ── BREATHING DYNAMICS ──
-  // Notes come in phrases of 2-5, then intentional silence
-  const noteInterval=Math.max(CFG.noteIntervalMin,CFG.noteIntervalBase-prox*2.5-convStage*0.3);
-  const inSilence=t<phraseSilenceUntil;
-
-  if(!inSilence&&t-lastNoteTime>noteInterval){lastNoteTime=t;
-    // Voice-lead from last note for melodic continuity
-    const note=Math.random()<0.7?voiceLead(notes,lastPhraseNote):notes[Math.floor(Math.random()*notes.length)];
-    lastPhraseNote=note;
-    // Velocity humanization: arc within phrase + random variance
-    const phraseArc=Math.sin((phraseNotes/Math.max(1,phraseMax))*Math.PI);
-    const vel=(0.1+prox*0.18+convStage*0.05)*(0.7+phraseArc*0.3)*(0.85+Math.random()*0.3);
-    pianoSynth.triggerAttackRelease(note,'4n',undefined,Math.min(0.5,vel));
-    // Harmonic doubling: more likely at phrase peak
-    if(prox>0.4&&Math.random()<prox*0.4*phraseArc){
-      const n2=voiceLead(notes,note);
-      pianoSynth.triggerAttackRelease(n2,'4n','+0.15',vel*0.5)}
-    // High octave shimmer at convergence peak
-    if(convStage>=3&&Math.random()<0.25){
-      const octUp=note.replace(/\d/,m=>parseInt(m)+1);
-      pianoSynth.triggerAttackRelease(octUp,'8n','+0.1',vel*0.2)}
-    // ── POST-MERGE RESONANCE: after merges, occasional wide-interval leaps ──
-    if(mergeCount>0&&Math.random()<0.12*mergeCount){
-      const leap=notes[Math.floor(Math.random()*notes.length)];
-      pianoSynth.triggerAttackRelease(leap,'8n','+0.3',vel*0.25)}
-
-    // Phrase breathing
-    phraseNotes++;
-    if(phraseNotes>=phraseMax){
-      phraseNotes=0;
-      phraseMax=CFG.phraseMinNotes+Math.floor(Math.random()*(CFG.phraseMaxNotes-CFG.phraseMinNotes+1));
-      // Silence duration: longer when distant, shorter when close
-      const silenceDur=prox>0.5?(CFG.silenceShortMin+Math.random()*CFG.silenceShortMax):
-        (CFG.silenceLongMin+Math.random()*CFG.silenceLongMax);
-      phraseSilenceUntil=t+silenceDur;
-    }
-  }
-
-  // Bass: slower, breathes independently — wider pool with liminal notes
-  if(convStage>=2&&t-lastBassTime>5.5+Math.random()*2){lastBassTime=t;
-    const bVel=(0.16+convStage*0.05)*(0.8+Math.random()*0.4);
-    const bPool=prox>0.5?bassNotesMajor:prox>0.25?bassNotesLiminal:bassNotesMinor;
-    bassSynth.triggerAttackRelease(bPool[Math.floor(Math.random()*bPool.length)],'2n',undefined,bVel)}
-  // Pad: expanded chord vocabulary — richer options per stage
-  if(convStage>=1&&t-lastPadChange>12+Math.random()*4){lastPadChange=t;
-    const chords=convStage>=3?[
-      ['C4','E4','G4','B4'],['A3','C4','E4','G4'],['F3','A3','C4','E4'],
-      ['G3','B3','D4','F4'],['D4','F4','A4','C5'],['E3','G3','B3','D4']
-    ]:convStage>=2?[
-      ['C4','Eb4','G4','Bb4'],['C4','E4','G4'],['Ab3','C4','Eb4','G4'],
-      ['F3','Ab3','C4','Eb4'],['Bb3','D4','F4','Ab4'],['Eb4','G4','Bb4','D5']
-    ]:[
-      ['C4','Eb4','G4'],['Ab3','C4','Eb4'],['Bb3','D4','F4'],
-      ['F3','Ab3','C4'],['Eb3','G3','Bb3'],['G3','Bb3','D4']
-    ];
-    padSynth.triggerAttackRelease(chords[Math.floor(Math.random()*chords.length)],'1n',undefined,
-      (0.08+convStage*0.03)*(0.8+Math.random()*0.4))}
-}
-function trigConvChord(stage){if(!audioReady)return;
-  // Chord complexity grows with both stage and merge history
-  const mergeRich=Math.min(mergeCount,3); // 0-3 enrichment levels
-  const chords=[
-    ['E4','G4'],
-    mergeRich>=1?['C4','Eb4','G4','Bb4','D5']:['C4','Eb4','G4','Bb4'],
-    mergeRich>=2?['C4','E4','G4','B4','D5','E5']:['C4','E4','G4','B4','E5'],
-    mergeRich>=3?['C3','C4','E4','G4','B4','C5','E5','G5']:['C4','E4','G4','C5','E5','G5']
-  ];
-  pianoSynth.triggerAttackRelease(chords[stage-1]||chords[0],'1n',undefined,0.25+stage*0.05);
-  if(stage>=3)bassSynth.triggerAttackRelease('C2','1n',undefined,0.3);
-  // Post-merge stages: bass gets richer
-  if(stage>=2&&mergeCount>=2)bassSynth.triggerAttackRelease('G1','1n','+0.2',0.15)}
-
 // ─── ORBIT ───────────────────────────────────────────────────────
 function updateTargets(t,dt){
+  const s=experience.state;
+  const motion=experience.reduced?.35:1;
+  t*=motion;
+  mDown=experience.held;
+  const ray=new THREE.Vector3(experience.pointer.x,experience.pointer.y,.5).unproject(camera).sub(camera.position).normalize();
+  mW.copy(camera.position).addScaledVector(ray,-camera.position.z/ray.z);
+  if(experience.repel){triggerRepel();experience.repel=0;}
   const f1=0.065,f2=0.045,f3=0.027,f4=0.019;
   const rB=1.8+Math.sin(t*0.025)*0.8+Math.sin(t*0.012)*0.4;
   const close=Math.sin(t*0.016)*0.5+0.5;
@@ -1429,8 +1062,13 @@ function updateTargets(t,dt){
   else{tgtA.set(ax,ay,az);tgtB.set(bx,by,bz)}
 
   const prevPull=pullStr;
-  if(mDown)pullStr=Math.min(1,pullStr+dt*CFG.pullAccel);else pullStr=Math.max(0,pullStr-dt*CFG.pullDecay);
+  if(mDown)pullStr=Math.min(1-s.pressure*.40,pullStr+dt*CFG.pullAccel);else pullStr=Math.max(0,pullStr-dt*CFG.pullDecay);
   if(pullStr>0.01){tgtA.lerp(mW,pullStr*0.35);tgtB.lerp(mW,pullStr*0.28)}
+  // An encounter needs room to become visible. Let the two forms breathe apart.
+  if(s.afterglow>0){
+    const away=new THREE.Vector3().subVectors(tgtB,tgtA).normalize();
+    tgtA.addScaledVector(away,-s.afterglow/16*.9);tgtB.addScaledVector(away,s.afterglow/16*.9);
+  }
   // ── REPEL: push souls apart ──
   if(repelStr>0.05){
     const repelAmt=repelStr*dt;
@@ -1441,7 +1079,7 @@ function updateTargets(t,dt){
     cumProx=Math.max(0,cumProx-dt*repelStr*0.5);
   }
   // [3] Earned ring on pull release (snap-back)
-  if(prevPull>0.5&&pullStr<0.3&&!mDown){spawnRing(new THREE.Vector3().lerpVectors(posA,posB,0.5),true);wasPulling=false}
+  if(wasPulling&&pullStr<0.3&&!mDown){spawnRing(new THREE.Vector3().lerpVectors(posA,posB,0.5),true);wasPulling=false}
   if(mDown&&pullStr>0.5)wasPulling=true;
 
   spV3(posA,tgtA,velA,mDown?CFG.springKPull:CFG.springK,dt);spV3(posB,tgtB,velB,mDown?CFG.springKPull:CFG.springK,dt);
@@ -1469,7 +1107,7 @@ function updateTargets(t,dt){
   const brightTarget=1.0+excitement*0.25+pullStr*0.1+cursorNear*0.08;
   eU(soulA.material,'uBrightness',brightTarget,dt,0.8);
   eU(soulB.material,'uBrightness',brightTarget,dt,0.8);
-  const hueA=((t*0.012)%1.0+0.08)%1.0,hueB=((t*0.012+0.5)%1.0+0.92)%1.0;
+  const hueA=.08+Math.sin(t*.02)*.012,hueB=.56+Math.sin(t*.017)*.012;
   soulA.material.uniforms.uHueShift.value=hueA;soulB.material.uniforms.uHueShift.value=hueB;
   soulA.material.uniforms.uProximity.value+=(prox-soulA.material.uniforms.uProximity.value)*dt*4;
   soulB.material.uniforms.uProximity.value+=(prox-soulB.material.uniforms.uProximity.value)*dt*4;
@@ -1482,8 +1120,8 @@ function updateTargets(t,dt){
   // Base strength modulated by life-event waves (occasional surges)
   const surgeA=Math.pow(Math.max(0,Math.sin(t*0.025+0.5)),4)*0.8; // rare intense moments
   const surgeB=Math.pow(Math.max(0,Math.sin(t*0.025+3.8)),4)*0.8;
-  const fieldA=0.45+fieldCycleA*0.55+surgeA+excitement*0.3;
-  const fieldB=0.45+fieldCycleB*0.55+surgeB+excitement*0.3;
+  const fieldA=(0.35+fieldCycleA*0.40+surgeA*.55+excitement*.2)*(s.afterglow>0?.65:1);
+  const fieldB=(0.35+fieldCycleB*0.40+surgeB*.55+excitement*.2)*(s.afterglow>0?.65:1);
   eU(soulA.material,'uFieldStr',fieldA,dt,0.8);
   eU(soulB.material,'uFieldStr',fieldB,dt,0.8);
   soulA.material.uniforms.uFieldPhase.value=0.0; // different phase per soul
@@ -1493,7 +1131,7 @@ function updateTargets(t,dt){
   soulB.material.uniforms.uOtherPos.value.copy(posA).sub(posB);
 
   // Convergence
-  updateConv(prox,dt,t);
+  updateConv(prox,dt,totalTime);
   burstFlashAlpha*=Math.max(0,1-dt*4);
   const stageBoost=convStage*0.1;
   soulA.material.uniforms.uBreath.value+=stageBoost*0.15;
@@ -1519,13 +1157,14 @@ function updateTargets(t,dt){
       spawnEj(posA,dirAB);spawnEj(posB,dirAB.negate());
     }
   }
-  if(pullStr>0.4&&Math.random()<pullStr*0.15){const d=new THREE.Vector3().subVectors(mW,posA).normalize();spawnEj(posA,d);spawnEj(posB,d)}
+  if(pullStr>0.4&&Math.random()<pullStr*dt*1.5){const d=new THREE.Vector3().subVectors(mW,posA).normalize();spawnEj(posA,d);spawnEj(posB,d)}
 
   lastProx=prox;return prox;
 }
 
 function updateCamera(t){
   // Push camera back on portrait screens (phones), keep intimate on landscape
+  if(experience.reduced)t=0;
   const aspect=W/H;
   const baseZ=aspect<1?Math.min(20,12/aspect*0.8):12;
   camera.position.x=Math.sin(t*0.02)*1.5;
@@ -1545,41 +1184,33 @@ function renderPipe(t){
   compPass.material.uniforms.flash.value=burstFlashAlpha;
   renderer.render(compPass.scene,fsCam)}
 
-// ─── LOOP ────────────────────────────────────────────────────────
-const clock=new THREE.Clock();let totalTime=0;
-function animate(){
-  requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),0.05);totalTime+=dt;const t=totalTime;
+// Pause the score, physics and decay together, including while a tab is hidden.
+let totalTime=0,lastFrame=0,idleRendered=false;
+function animate(now){
+  if(experience.renderer!=='webgl')return;
+  requestAnimationFrame(animate);
+  const dt=Math.min(.05,(now-lastFrame)/1000||.016);lastFrame=now;
+  if(!experience.started){if(!idleRendered){updateCamera(0);renderPipe(0);idleRendered=true;}return;}
+  if(experience.paused||experience.modal||document.hidden||experience.state.ended)return;
+  totalTime+=dt;const t=totalTime,motionTime=experience.reduced?t*.35:t;
   perfCheck(dt);
-  const prox=updateTargets(t,dt);
-  updateTr(trA,posA);updateTr(trB,posB);
-  updateRings(dt);updateEj(dt);
-  updateRibbon(t);updateMems(t,dt);
-  updateTypo(t);updateColorField(t);updateCamera(t);
-  drawStars(t);updateQuotes(t);
-  // ── IMPERMANENCE: vignette tightens as world erodes ──
-  const vigDecay=soulA.material.uniforms.uDecay.value;
-  const vigShrink=60-vigDecay*25; // 60% → 35% transparent zone
-  const vigAlpha=0.35+vigDecay*0.3; // 35% → 65% edge darkness
-  document.getElementById('crt-overlay').style.background=
-    `radial-gradient(ellipse at center,transparent ${vigShrink}%,rgba(3,2,6,${vigAlpha}) 100%)`;
-  updateAudio(t,prox);
-  if(memSpawned&&audioReady&&pianoSynth&&totalTime>=phraseSilenceUntil){
-    const notes=currentProx>0.5?majorNotes:currentProx>0.3?liminalNotes:
-      currentProx>0.15?[...minorNotes.slice(0,4),...liminalNotes.slice(4)]:minorNotes;
-    const n=Math.random()<0.7?voiceLead(notes,lastPhraseNote):notes[Math.floor(Math.random()*notes.length)];
-    pianoSynth.triggerAttackRelease(n,'8n',undefined,0.08+currentProx*0.1);lastPhraseNote=n}
-  // ── IMPERMANENCE: engagement-based erosion ──
-  decayAccum+=dt*Math.max(0.08,1.0-currentProx*0.85);
-  const decayGrace=Math.max(0,decayAccum-CFG.decayGracePeriod);
-  const decayRaw=decayGrace/CFG.decayDuration;
-  const decay=Math.min(1.0,Math.pow(decayRaw,CFG.decayExponent));
-  soulA.material.uniforms.uDecay.value=decay;soulB.material.uniforms.uDecay.value=decay;
-  // ── DOF: focal plane tracks midpoint between souls ──
-  const mid=new THREE.Vector3().lerpVectors(posA,posB,0.5).applyMatrix4(camera.matrixWorldInverse);
-  soulA.material.uniforms.uFocalZ.value=mid.z;soulB.material.uniforms.uFocalZ.value=mid.z;
-  soulA.material.uniforms.uTime.value=t;soulB.material.uniforms.uTime.value=t;
-  renderPipe(t)}
-animate();
+  updateTargets(t,dt);updateTr(trA,posA);updateTr(trB,posB);
+  updateRings(dt);updateEj(dt);updateRibbon(motionTime);updateMems(motionTime,dt);updateCamera(t);
+  const decay=experience.state.decay;
+  const mid=new THREE.Vector3().lerpVectors(posA,posB,.5).applyMatrix4(camera.matrixWorldInverse);
+  for(const soul of [soulA,soulB]){
+    soul.material.uniforms.uDecay.value=decay;
+    soul.material.uniforms.uFocalZ.value=mid.z;
+    soul.material.uniforms.uTime.value=motionTime;
+  }
+  compPass.material.uniforms.bStr.value*=1-decay*.65;
+  burstFlashAlpha=0;
+  renderPipe(motionTime);
+}
+requestAnimationFrame(animate);
+renderer.domElement.addEventListener('webglcontextlost',e=>{
+  e.preventDefault();renderer.domElement.remove();bootCanvas();
+});
 
 window.addEventListener('resize',()=>{W=innerWidth;H=innerHeight;
   camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);
@@ -1588,17 +1219,16 @@ window.addEventListener('resize',()=>{W=innerWidth;H=innerHeight;
   compPass.material.uniforms.res.value.set(W,H);starCvs.width=W;starCvs.height=H;
   for(const s of stars){s.baseX=Math.random()*W;s.baseY=Math.random()*H}});
 
-// ─── VISIBILITY API — sleep on tab switch ────────────────────────
-document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){
-    if(audioReady&&master)master.gain.rampTo(0,0.5);
-    clock.stop();
-  }else{
-    if(audioReady&&master)master.gain.rampTo(CFG.masterGain,1.0);
-    clock.start();
-    clock.getDelta(); // flush accumulated pause time to prevent dt spike
-  }
-});
+} // bootWebGL
+try{
+  const testCanvas=document.createElement('canvas');
+  const context=window.THREE&&(testCanvas.getContext('webgl')||testCanvas.getContext('experimental-webgl'));
+  if(context){const ext=context.getExtension('WEBGL_lose_context');if(ext)ext.loseContext();bootWebGL();}
+  else bootCanvas();
+}catch(error){
+  console.warn('Using the Canvas rendition:',error);
+  document.querySelectorAll('canvas:not(#star-canvas)').forEach(c=>c.remove());bootCanvas();
+}
 </script>
 </body>
 </html>
