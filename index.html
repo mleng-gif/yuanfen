@@ -112,7 +112,7 @@ body:not(.entered) #mark,body:not(.entered) #instructions{opacity:0}
 
 <div id="webgl-fail">The artwork could not start in this browser.<br>Please reload or try another browser.</div>
 
-<div id="interaction-surface" tabindex="0" role="application" aria-label="Yuánfèn interactive artwork" aria-describedby="accessible-guide"></div>
+<div id="interaction-surface" tabindex="-1" role="application" aria-label="Yuánfèn interactive artwork" aria-describedby="accessible-guide"></div>
 <div id="accessible-guide" class="sr-only">Hold the pointer or Space to draw the two presences together. Release to let them move freely. Double-tap or press the down arrow to separate them. After contact each carries visible traces of the other. The work lasts about four and a half minutes. Sound, pause and gentle-motion controls are available above the artwork.</div>
 <div id="live-status" class="sr-only" role="status" aria-live="polite"></div>
 <nav id="exhibition-controls" aria-label="Experience controls" hidden>
@@ -253,7 +253,7 @@ async function enterPiece(withSound){
   experience.started=true;experience.audio.enabled=withSound;
   $('ceremony').classList.add('farewell');$('ceremony').inert=true;
   $('exhibition-controls').hidden=false;$('stage').hidden=false;
-  document.body.classList.add('entered');$('interaction-surface').focus({preventScroll:true});
+  document.body.classList.add('entered');$('interaction-surface').tabIndex=0;$('interaction-surface').focus({preventScroll:true});
   if(withSound){const ok=await experience.audio.start();if(!ok){experience.audio.enabled=false;announce('Sound could not start. You can continue quietly or try Sound again.');}}
   syncControls();
 }
@@ -327,12 +327,13 @@ function bootCanvas(){
   experience.renderer='canvas';document.body.dataset.renderer='canvas';
   const cvs=document.createElement('canvas');cvs.id='fallback-art';cvs.setAttribute('aria-hidden','true');document.body.prepend(cvs);
   const ctx=cvs.getContext('2d');if(!ctx){$('webgl-fail').style.display='flex';return;}
-  let w=0,h=0,dpr=1,last=0,phase=0,pull=0,kick=0,distance=.5;
+  let w=0,h=0,dpr=1,last=0,phase=0,pull=0,kick=0,distance=.5,idleDrawn=false;
   const particles=Array.from({length:2200},()=>({a:Math.random()*Math.PI*2,z:Math.random()*2-1,r:.72+Math.random()*.28,ph:Math.random()*Math.PI*2,size:.45+Math.random()*.65}));
-  function resize(){w=innerWidth;h=innerHeight;dpr=Math.min(devicePixelRatio,1.5);cvs.width=w*dpr;cvs.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  function resize(){idleDrawn=false;w=innerWidth;h=innerHeight;dpr=Math.min(devicePixelRatio,1.5);cvs.width=w*dpr;cvs.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
   window.addEventListener('resize',resize);resize();
   function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000||.016);last=now;
-    if(document.hidden||experience.paused||experience.modal)return;
+    if(document.hidden||experience.paused||experience.modal||experience.state.ended)return;
+    if(!experience.started&&idleDrawn)return;idleDrawn=true;
     const active=experience.started&&!experience.state.ended,s=experience.state;
     if(active){phase+=dt*(experience.reduced?.35:1);pull+=(Number(experience.held)*(1-s.pressure*.42)-pull)*dt*1.1;
       if(experience.repel){kick=1;experience.repel=0;experience.held=false;}kick=Math.max(0,kick-dt*.15);
@@ -765,7 +766,7 @@ function createSoul(ghostHue,coreBiasDir){
 
         // ── IMPERMANENCE — particles erode over time ──
         // Outer shell goes first. Core holds longest. Each particle has its own moment.
-        // Proximity slows the clock — connection sustains, but can't stop it.
+        // Inherited particles outlast the outer shell; time affects both presences equally.
         float effectiveDecay=uDecay*(1.0-aTrace*0.42);
         // mortality: outer (high aDepth) erodes early, core (low aDepth) resists
         // aPhase adds per-particle variation so they don't vanish in unison
